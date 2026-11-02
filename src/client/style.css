@@ -1,0 +1,35 @@
+:root {
+  --bg: #12151b;
+  --panel: #1b2029e6;
+  --line: #2f3746;
+  --text: #e6e9ef;
+  --muted: #8b93a3;
+  --accent: #f5b942;
+  --ok: #5fd38d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: crosshair; }
+#hud, #toolbar, #side, #hint { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+#hud { top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 18px; align-items: center; }
+#hud b { color: var(--accent); font-size: 16px; }
+#toolbar { left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 6px; }
+#side { right: 8px; top: 8px; width: 250px; max-height: calc(100% - 56px); overflow-y: auto; }
+#hint { bottom: 8px; left: 50%; transform: translateX(-50%); color: var(--muted); }
+h3 { margin: 10px 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+h3:first-child { margin-top: 0; }
+button, select { font: inherit; color: var(--text); background: #232a36; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.active { border-color: var(--accent); background: #3a3320; }
+.tool { display: flex; align-items: center; gap: 8px; width: 150px; text-align: left; }
+.tool canvas { position: static; width: 24px; height: 24px; flex: none; cursor: inherit; }
+.tool kbd { margin-left: auto; color: var(--muted); }
+.row { display: flex; justify-content: space-between; gap: 8px; }
+.tech { border: 1px solid var(--line); border-radius: 4px; padding: 6px; margin-bottom: 6px; }
+.tech.done { opacity: .5; }
+.tech .cost { color: var(--muted); font-size: 12px; }
+.tech .cost .short { color: #e57373; }
+.tech button { margin-top: 4px; width: 100%; }
+.muted { color: var(--muted); }
+@media (max-width: 720px) { #side { width: 190px; font-size: 11px; } .tool { width: 44px; } .tool span, .tool kbd { display: none; } }
