@@ -211,11 +211,12 @@ const cloudStart = clouds.map((c) => c.position.x);
 anims.push((t) => clouds.forEach((c, k) => { c.position.x = cloudStart[k] + Math.sin(phase(t, 1) * TAU) * 2.4; }));
 
 // ---------- câmera e laço de render ----------
+let zoom = Number(new URLSearchParams(location.search).get('zoom') ?? 5.6);
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setPixelRatio(1 / PIXEL_SIZE);
   renderer.setSize(w, h, false);
-  const half = Number(new URLSearchParams(location.search).get('zoom') ?? 5.6);
+  const half = zoom;
   Object.assign(camera, { left: -half * (w / h), right: half * (w / h), top: half, bottom: -half });
   camera.updateProjectionMatrix();
 }
@@ -234,6 +235,7 @@ function frame(t: number) {
   renderer.render(scene, camera);
 }
 (window as unknown as { __frame: (t: number) => void }).__frame = frame;
+(window as unknown as { __setZoom: (z: number) => void }).__setZoom = (z) => { zoom = z; resize(); };
 const t0 = performance.now();
 const loop = (now: number) => { frame((now - t0) / 1000); requestAnimationFrame(loop); };
 if (!new URLSearchParams(location.search).has('manual')) requestAnimationFrame(loop);
