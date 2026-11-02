@@ -1,4 +1,4 @@
-import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS } from './data';
+import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, MAX_TIER, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS, TIERED_KINDS, tierCost } from './data';
 import { createEntity, stepEntity, type World } from './machines';
 import type { BuildingKind, Dir, Entity, ItemId } from './types';
 import { generateTerrain, isBuildableTile, MAX_ZONE, Tile, VOID_ZONE, type Terrain } from './world';
@@ -26,6 +26,8 @@ export class Game implements World {
   score = 0;
   /** Maior zona da ilha já liberada para construção. */
   unlockedZone = 0;
+  /** Maior versão de máquina (Mk) já pesquisada; é possível construir qualquer Mk de 1 até ela. */
+  machineTier = 1;
 
   private readonly grid: (Entity | undefined)[];
   private readonly unlockedBuildings = new Set<BuildingKind>(STARTING_BUILDINGS);
@@ -65,8 +67,8 @@ export class Game implements World {
   }
 
   /** Verifica se `kind` cabe com o canto superior esquerdo em (x, y), sem construir. */
-  canPlace(kind: BuildingKind, x: number, y: number): PlaceResult {
-    if (!this.unlockedBuildings.has(kind)) return 'locked';
+  canPlace(kind: BuildingKind, x: number, y: number, mk = 1): PlaceResult {
+    if (!this.unlockedBuildings.has(kind) || mk < 1 || mk > this.machineTier) return 'locked';
     const size = BUILDING_SIZE[kind];
     const ore = this.surveyOre(x, y, size);
     for (let cy = y; cy < y + size; cy++) {
@@ -81,11 +83,11 @@ export class Game implements World {
     return kind === 'miner' && !ore ? 'needs_ore' : 'ok';
   }
 
-  place(kind: BuildingKind, x: number, y: number, dir: Dir): PlaceResult {
-    const result = this.canPlace(kind, x, y);
+  place(kind: BuildingKind, x: number, y: number, dir: Dir, mk = 1): PlaceResult {
+    const result = this.canPlace(kind, x, y, mk);
     if (result !== 'ok') return result;
     const size = BUILDING_SIZE[kind];
-    const entity = createEntity(this.nextId++, kind, x, y, size, dir);
+    const entity = createEntity(this.nextId++, kind, x, y, size, dir, TIERED_KINDS.includes(kind) ? mk : 1);
     const ore = kind === 'miner' ? this.surveyOre(x, y, size) : undefined;
     if (ore) {
       entity.ore = ore.ore;
@@ -130,6 +132,24 @@ export class Game implements World {
     entity.outCount = 0;
     entity.crafting = false;
     entity.progress = 0;
+    return true;
+  }
+
+  /** Pontos que a próxima versão de máquina custa; undefined se já está no máximo. */
+  nextTierCost(): number | undefined {
+    return this.machineTier < MAX_TIER ? tierCost(this.machineTier + 1) : undefined;
+  }
+
+  canResearchTier(): boolean {
+    const cost = this.nextTierCost();
+    return cost !== undefined && this.score >= cost;
+  }
+
+  /** Gasta pontos do placar para liberar a próxima versão de máquina (+10% de desempenho). */
+  researchTier(): boolean {
+    if (!this.canResearchTier()) return false;
+    this.score -= this.nextTierCost()!;
+    this.machineTier++;
     return true;
   }
 

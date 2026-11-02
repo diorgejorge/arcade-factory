@@ -281,7 +281,7 @@ export function createWorld3D(canvas: HTMLCanvasElement, game: Game) {
         alive.add(entity.id);
         let model = models.get(entity.id);
         if (!model) {
-          model = createModel(entity.kind, entity.dir);
+          model = createModel(entity.kind, entity.dir, entity.mk);
           model.group.position.copy(centerOf(entity.x, entity.y, entity.size));
           model.group.scale.setScalar(entity.size);
           scene.add(model.group, ...(model.effects ?? []));

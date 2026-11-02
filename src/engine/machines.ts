@@ -1,4 +1,4 @@
-import { CRAFT_SPEED, FURNACE_RECIPE_BY_INPUT, RECIPES } from './data';
+import { CRAFT_SPEED, FURNACE_RECIPE_BY_INPUT, RECIPES, tierBoost } from './data';
 import type { BeltItem, BuildingKind, Dir, Entity, ItemId, Recipe } from './types';
 import { DX, DY, oppositeDir } from './types';
 
@@ -20,8 +20,8 @@ const INPUT_BUFFER_FACTOR = 2;
 /** Uma mineradora com 1 minério embaixo leva MINER_CYCLE ticks por item; com 4, um quarto disso. */
 export const MINER_CYCLE = 60;
 
-export function createEntity(id: number, kind: BuildingKind, x: number, y: number, size: number, dir: Dir): Entity {
-  return { id, kind, x, y, size, dir, belt: [], inputs: {}, oreCount: 0, outCount: 0, crafting: false, progress: 0, outCursor: 0 };
+export function createEntity(id: number, kind: BuildingKind, x: number, y: number, size: number, dir: Dir, mk: number): Entity {
+  return { id, kind, x, y, size, dir, mk, belt: [], inputs: {}, oreCount: 0, outCount: 0, crafting: false, progress: 0, outCursor: 0 };
 }
 
 function placeAlong(entity: Entity, item: BeltItem, dir: Dir): void {
@@ -198,7 +198,7 @@ function stepRouter(world: World, router: Entity): void {
 
 function stepMiner(world: World, miner: Entity): void {
   if (miner.outCount === 0 && miner.ore) {
-    miner.progress += miner.oreCount * world.minerRate;
+    miner.progress += miner.oreCount * world.minerRate * tierBoost(miner.mk);
     if (miner.progress >= MINER_CYCLE) {
       miner.progress -= MINER_CYCLE;
       miner.outItem = miner.ore;
@@ -217,7 +217,7 @@ function stepCrafter(world: World, entity: Entity): void {
   if (recipe) {
     const hasRoom = entity.outCount + recipe.outputCount <= OUTPUT_CAP;
     if (entity.crafting) {
-      entity.progress += CRAFT_SPEED[entity.kind] ?? 1;
+      entity.progress += (CRAFT_SPEED[entity.kind] ?? 1) * tierBoost(entity.mk);
       if (entity.progress >= recipe.ticks && hasRoom) {
         entity.outItem = recipe.output;
         entity.outCount += recipe.outputCount;

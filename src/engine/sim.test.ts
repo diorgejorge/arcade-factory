@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEM_VALUE, REMOVAL_COST } from './data';
+import { ITEM_VALUE, REMOVAL_COST, tierBoost, tierCost } from './data';
 import { offerItem } from './machines';
 import { Game } from './sim';
 import { isBuildableTile, Tile, VOID_ZONE } from './world';
@@ -237,5 +237,57 @@ describe('pesquisa', () => {
     game.place('assembler', x, y, 0);
     expect(game.setRecipe(x, y, 'circuit')).toBe(false);
     expect(game.setRecipe(x + 2, y + 2, 'gear')).toBe(true); // qualquer célula da máquina serve
+  });
+});
+
+describe('versões Mk', () => {
+  it('cada versão custa mais pontos e soma 10% de desempenho', () => {
+    expect([tierCost(2), tierCost(3), tierCost(4)]).toEqual([2000, 5000, 12500]);
+    expect([tierBoost(1), tierBoost(2), tierBoost(4)].map((v) => +v.toFixed(2))).toEqual([1, 1.1, 1.3]);
+  });
+
+  it('a pesquisa gasta pontos do placar, na ordem, e só com saldo', () => {
+    const game = new Game(SEED);
+    game.score = 1999;
+    expect(game.researchTier()).toBe(false);
+    game.score = 2500;
+    expect(game.researchTier()).toBe(true);
+    expect(game.machineTier).toBe(2);
+    expect(game.score).toBe(500);
+    expect(game.nextTierCost()).toBe(5000);
+    expect(game.researchTier()).toBe(false);
+  });
+
+  it('só constrói versões já pesquisadas; logística e Central ficam na Mk1', () => {
+    const game = new Game(SEED);
+    const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
+    expect(game.place('miner', x, y, 0, 2)).toBe('locked');
+    game.score = 100000;
+    game.researchTier();
+    game.researchTier();
+    expect(game.machineTier).toBe(3);
+    expect(game.place('miner', x, y, 0, 4)).toBe('locked');
+    expect(game.place('miner', x, y, 0, 3)).toBe('ok');
+    expect(game.entityAt(x, y)!.mk).toBe(3);
+    expect(game.place('hub', x + 2, y, 0, 3)).toBe('ok');
+    expect(game.entityAt(x + 2, y)!.mk).toBe(1);
+  });
+
+  it('a mineradora Mk3 rende 20% a mais que a Mk1 no mesmo sítio', () => {
+    const delivered = (mk: number) => {
+      const game = new Game(SEED);
+      game.score = 100000;
+      game.researchTier();
+      game.researchTier();
+      const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
+      game.place('miner', x, y, 0, mk);
+      game.place('hub', x + 2, y, 0);
+      runTicks(game, 1200);
+      return game.inventory.iron_ore;
+    };
+    const base = delivered(1);
+    const upgraded = delivered(3);
+    expect(upgraded / base).toBeGreaterThan(1.15);
+    expect(upgraded / base).toBeLessThan(1.25);
   });
 });

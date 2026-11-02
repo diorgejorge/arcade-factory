@@ -21,7 +21,7 @@ const PLACE_MESSAGES: Record<PlaceResult, string> = {
 type Cell = { x: number; y: number };
 
 const game = new Game(SEASON_SEED);
-const state: UiState = { tool: null, selected: null };
+const state: UiState = { tool: null, selected: null, mk: 1 };
 let toolDir: Dir = 0;
 let hover: Cell | undefined;
 
@@ -48,12 +48,12 @@ const anchorFor = (kind: BuildingKind, cell: Cell): Cell => {
 function updateGhost(): void {
   if (!state.tool || !hover) return world.setGhost(null);
   const anchor = anchorFor(state.tool, hover);
-  world.setGhost({ kind: state.tool, ...anchor, dir: toolDir, valid: game.canPlace(state.tool, anchor.x, anchor.y) === 'ok' });
+  world.setGhost({ kind: state.tool, ...anchor, dir: toolDir, valid: game.canPlace(state.tool, anchor.x, anchor.y, state.mk) === 'ok' });
 }
 
 function build(kind: BuildingKind, cell: Cell, dir: Dir): void {
   const { x, y } = anchorFor(kind, cell);
-  const result = game.place(kind, x, y, dir);
+  const result = game.place(kind, x, y, dir, state.mk);
   if (result !== 'ok') {
     if (result !== 'occupied') ui.showHint(PLACE_MESSAGES[result]);
     return;

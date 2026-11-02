@@ -62,6 +62,8 @@ export interface Entity {
   /** Lado da área quadrada ocupada, em tiles. */
   size: number;
   dir: Dir;
+  /** Versão da máquina (Mk1, Mk2...): cada versão acima da 1 acelera em 10%. */
+  mk: number;
   /** Itens em trânsito (esteira, junção ou roteador), do mais à frente para o mais atrás. */
   belt: BeltItem[];
   /** Receita atual (montadora escolhida pelo jogador; fornalha definida pelo minério recebido). */

@@ -54,6 +54,15 @@ export const REMOVAL_COST: Record<BuildingKind, number> = {
   hub: 100,
 };
 
+/** Máquinas que têm versões Mk2, Mk3... (logística e Central não têm). */
+export const TIERED_KINDS: readonly BuildingKind[] = ['miner', 'furnace', 'assembler'];
+export const MAX_TIER = 8;
+/** Cada versão acima da Mk1 soma 10% de desempenho (Mk4 = +30%). */
+export const TIER_BONUS = 0.1;
+export const tierBoost = (mk: number): number => 1 + TIER_BONUS * (mk - 1);
+/** Pontos para pesquisar a versão `tier` (Mk2 em diante): 2000, 5000, 12500... valores provisórios de balanceamento. */
+export const tierCost = (tier: number): number => Math.round(2000 * 2.5 ** (tier - 2));
+
 /** Multiplicador de velocidade de produção das máquinas. */
 export const CRAFT_SPEED: Partial<Record<BuildingKind, number>> = { furnace: 3, assembler: 4 };
 

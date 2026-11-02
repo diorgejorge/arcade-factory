@@ -68,6 +68,14 @@ export function makeGear(r: number, teeth: number, hex: string, thick = 0.09): T
 const rivets = (parent: THREE.Object3D, points: [number, number, number][], size = 0.035) =>
   points.forEach(([x, y, z]) => box(parent, size, size, size, x, y, z, C.brassLight));
 
+/** Pinos dourados num ponto visível da máquina: um para cada versão acima da Mk1, distribuídos em `width`. */
+function studs(parent: THREE.Object3D, mk: number, y: number, z: number, width = 0.8) {
+  const count = Math.min(mk - 1, 7);
+  const step = width / Math.max(count, 1);
+  const size = Math.min(0.12, step * 0.8);
+  for (let k = 0; k < count; k++) box(parent, size, size, size, -width / 2 + step * (k + 0.5), y, z, C.brassLight, '#ffcf5a');
+}
+
 function spout(parent: THREE.Object3D, y = 0.1) {
   box(parent, 0.2, 0.12, 0.26, 0.5, y, 0, C.brass);
   box(parent, 0.08, 0.08, 0.2, 0.62, y + 0.02, 0, C.dark);
@@ -75,7 +83,7 @@ function spout(parent: THREE.Object3D, y = 0.1) {
 
 // ---------- modelos (saída sempre para +x; o grupo externo gira conforme a direção) ----------
 
-function miner(): Model {
+function miner(mk: number): Model {
   const g = new THREE.Group();
   box(g, 0.98, 0.1, 0.98, 0, 0, 0, C.steelDark);
   box(g, 1, 0.04, 1, 0, 0.1, 0, C.brassDark);
@@ -104,6 +112,7 @@ function miner(): Model {
   box(g, 0.16, 0.3, 0.16, -0.34, 0.14, 0.34, C.copperDark);
   for (const [x, z] of [[-0.3, 0.1], [0.1, -0.4], [0.35, -0.1]]) box(g, 0.14, 0.1, 0.12, x, 0.14, z, '#8f9cac');
   spout(g, 0.14);
+  studs(g, mk, 1.32, 0.24, 0.5);
 
   const root = new THREE.Group(); root.add(g);
   let t = 0;
@@ -119,7 +128,7 @@ function miner(): Model {
   };
 }
 
-function furnace(): Model {
+function furnace(mk: number): Model {
   const g = new THREE.Group();
   box(g, 0.98, 0.14, 0.98, 0, 0, 0, C.steelDark);
   cyl(g, 0.38, 0.7, 0, 0.14, 0, C.copper, 14);
@@ -142,6 +151,7 @@ function furnace(): Model {
   const gauge = cyl(g, 0.085, 0.05, 0.18, 0.62, 0.36, C.brass, 12); gauge.rotation.x = Math.PI / 2;
   cyl(g, 0.065, 0.055, 0.18, 0.625, 0.363, C.glass, 12).rotation.x = Math.PI / 2;
   spout(g, 0.1);
+  studs(g, mk, 0.14, 0.43);
 
   const light = new THREE.PointLight(0xff8a2a, 5, 5);
   light.position.set(0.8, 0.5, 0);
@@ -173,7 +183,7 @@ function furnace(): Model {
   };
 }
 
-function assembler(): Model {
+function assembler(mk: number): Model {
   const g = new THREE.Group();
   box(g, 0.98, 0.1, 0.98, 0, 0, 0, C.steelDark);
   box(g, 0.94, 0.44, 0.94, 0, 0.1, 0, C.brass);
@@ -196,6 +206,7 @@ function assembler(): Model {
   cyl(g, 0.07, 0.4, 0.36, 0.54, -0.36, C.steel, 8); cyl(g, 0.1, 0.05, 0.36, 0.94, -0.36, C.brass, 8);
   const lamp = box(g, 0.13, 0.13, 0.13, 0.36, 0.54, 0.36, C.lamp, '#ffb020');
   spout(g, 0.12);
+  studs(g, mk, 0.54, 0.43);
 
   const root = new THREE.Group(); root.add(g);
   let t = 0;
@@ -289,11 +300,11 @@ function router(): Model {
   return { group: root, update(dt, active) { t += dt * (active ? 1 : 0.2); cog.rotation.y = t * spin(8, 4); } };
 }
 
-const BUILDERS: Record<BuildingKind, () => Model> = { miner, furnace, assembler, hub, conveyor, junction, router };
+const BUILDERS: Record<BuildingKind, (mk: number) => Model> = { miner, furnace, assembler, hub, conveyor, junction, router };
 
 /** Cria o modelo de um prédio já voltado para a direção `dir` (0 = leste, 1 = sul, 2 = oeste, 3 = norte). */
-export function createModel(kind: BuildingKind, dir: Dir): Model {
-  const model = BUILDERS[kind]();
+export function createModel(kind: BuildingKind, dir: Dir, mk = 1): Model {
+  const model = BUILDERS[kind](mk);
   model.group.rotation.y = -dir * (Math.PI / 2);
   return model;
 }
