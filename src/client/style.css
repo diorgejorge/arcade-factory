@@ -29,7 +29,7 @@ button.active { border-color: var(--accent); background: #3a3320; }
 .tech { border: 1px solid var(--line); border-radius: 4px; padding: 6px; margin-bottom: 6px; }
 .tech.done { opacity: .5; }
 .tech .cost { color: var(--muted); font-size: 12px; }
-.tech .cost .short { color: #e57373; }
+.tech .short { color: #e57373; }
 .tech button { margin-top: 4px; width: 100%; }
 .muted { color: var(--muted); }
 @media (max-width: 720px) { #side { width: 190px; font-size: 11px; } .tool { width: 44px; } .tool span, .tool kbd { display: none; } }

@@ -94,18 +94,39 @@ export const FURNACE_RECIPE_BY_INPUT: Partial<Record<ItemId, Recipe>> = Object.f
     .map((recipe) => [Object.keys(recipe.inputs)[0], recipe]),
 );
 
-/** Árvore de pesquisa: todas custam pontos do placar (valor de antes: os itens que cada uma pedia) e exigem a anterior. */
+/**
+ * Árvore de pesquisa. Todas custam pontos do placar e exigem TODOS os requisitos listados
+ * (tecnologias, ou `mkN` = máquinas na versão N). Custos provisórios, a acertar jogando.
+ * Ramos: processamento (fundição → montagem → fiação → eletrônica → robótica), logística/território
+ * (logística → expansões) e a evolução das máquinas (Mk), que se cruzam em Robótica (3 requisitos).
+ */
 export const TECHS: readonly Tech[] = [
-  { id: 'smelting', name: 'Fundição', cost: 30, buildings: ['furnace'], recipes: ['smelt_iron', 'smelt_copper'] },
-  { id: 'logistics', name: 'Logística', cost: 50, requires: 'smelting', buildings: ['junction', 'router'] },
-  { id: 'assembly', name: 'Montagem', cost: 80, requires: 'smelting', buildings: ['assembler'], recipes: ['gear'] },
-  { id: 'land_1', name: 'Expansão I', cost: 160, requires: 'assembly', effect: 'expand_land' },
-  { id: 'electronics', name: 'Eletrônica', cost: 220, requires: 'assembly', recipes: ['wire', 'circuit'] },
-  { id: 'land_2', name: 'Expansão II', cost: 440, requires: 'land_1', effect: 'expand_land' },
-  { id: 'robotics', name: 'Robótica', cost: 480, requires: 'electronics', recipes: ['motor'] },
-  { id: 'land_3', name: 'Expansão III', cost: 960, requires: 'land_2', effect: 'expand_land' },
-  { id: 'overclock', name: 'Overclock', cost: 320, requires: 'robotics', effect: 'miner_boost' },
+  { id: 'smelting', name: 'Fundição de ferro', cost: 30, buildings: ['furnace'], recipes: ['smelt_iron'] },
+  { id: 'smelting_copper', name: 'Fundição de cobre', cost: 60, requires: ['smelting'], recipes: ['smelt_copper'] },
+  { id: 'logistics', name: 'Logística', cost: 50, requires: ['smelting'], buildings: ['junction', 'router'] },
+  { id: 'assembly', name: 'Montagem', cost: 80, requires: ['smelting'], buildings: ['assembler'], recipes: ['gear'] },
+  { id: 'wiring', name: 'Fiação', cost: 120, requires: ['assembly', 'smelting_copper'], recipes: ['wire'] },
+  { id: 'land_1', name: 'Expansão I', cost: 160, requires: ['assembly', 'logistics'], effect: 'expand_land' },
+  { id: 'electronics', name: 'Eletrônica', cost: 220, requires: ['wiring', 'logistics'], recipes: ['circuit'] },
+  { id: 'land_2', name: 'Expansão II', cost: 440, requires: ['land_1', 'electronics'], effect: 'expand_land' },
+  { id: 'robotics', name: 'Robótica', cost: 600, requires: ['electronics', 'land_1', 'mk2'], recipes: ['motor'] },
+  { id: 'land_3', name: 'Expansão III', cost: 960, requires: ['land_2', 'robotics'], effect: 'expand_land' },
+  { id: 'overclock', name: 'Overclock', cost: 800, requires: ['robotics', 'land_2'], effect: 'miner_boost' },
 ];
+
+/** Requisitos (além da versão anterior) para pesquisar a versão `tier` das máquinas. */
+export const tierRequires = (tier: number): readonly string[] =>
+  tier <= 2 ? ['assembly'] : tier === 3 ? ['electronics'] : tier === 4 ? ['robotics', 'land_2'] : ['overclock'];
+
+const techById = new Map(TECHS.map((tech) => [tech.id, tech]));
+export const requirementLabel = (id: string): string => (id.startsWith('mk') ? `Máquinas Mk${id.slice(2)}` : techById.get(id)!.name);
+
+const depthOf = (id: string): number => {
+  const requires = techById.get(id)?.requires;
+  return requires ? 1 + Math.max(...requires.map(depthOf)) : 0;
+};
+/** Tecnologias em ordem de desbloqueio (profundidade na árvore), para exibir na lista. */
+export const TECHS_BY_DEPTH: readonly Tech[] = [...TECHS].sort((a, b) => depthOf(a.id) - depthOf(b.id));
 
 /** Cada nível de transformação multiplica o valor dos ingredientes por este fator. */
 const TIER_MULTIPLIER = 2;

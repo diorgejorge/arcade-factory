@@ -35,8 +35,8 @@ export interface Tech {
   name: string;
   /** Pontos do placar gastos para pesquisar. */
   cost: number;
-  /** Tecnologia que precisa estar pesquisada antes. */
-  requires?: string;
+  /** Requisitos (todos obrigatórios): ids de tecnologias ou `mkN` (máquinas na versão N). */
+  requires?: readonly string[];
   buildings?: BuildingKind[];
   recipes?: string[];
   effect?: 'miner_boost' | 'expand_land';

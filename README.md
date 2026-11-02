@@ -25,6 +25,23 @@ npm run build   # typecheck + build de produção
 - Clique numa montadora para escolher a receita.
 - **Remover custa pontos** (por tipo de construção; o placar nunca fica negativo). Só remove com clique direito, sem arrastar.
 
+## Árvore de pesquisa
+
+Todas custam **pontos do placar** e exigem **todos** os requisitos (✓/✗ no cartão). `mkN` = máquinas já na versão N.
+
+```
+Fundição de ferro ─┬─ Fundição de cobre ──────┐
+                   ├─ Logística ──┬───────────┼─ Eletrônica ─┐          (Fiação + Logística)
+                   └─ Montagem ───┴─ Fiação ──┘              │
+ Expansão I      = Montagem + Logística                      │
+ Expansão II     = Expansão I + Eletrônica                   │
+ Robótica        = Eletrônica + Expansão I + Mk2   (3)       │
+ Expansão III    = Expansão II + Robótica
+ Overclock       = Robótica + Expansão II
+ Fiação          = Montagem + Fundição de cobre
+ Versões das máquinas: Mk2 ← Montagem · Mk3 ← Eletrônica · Mk4 ← Robótica + Expansão II (+ Mk3) · Mk5+ ← Overclock
+```
+
 ## Pontuação
 
 `valor = soma(ingredientes) / unidades produzidas × 2`. Minério = 1, placa = 2, engrenagem = 8, circuito = 16, motor = 64.

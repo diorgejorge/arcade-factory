@@ -1,4 +1,4 @@
-import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, MAX_TIER, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS, TIERED_KINDS, tierCost } from './data';
+import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, MAX_TIER, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS, TIERED_KINDS, tierCost, tierRequires } from './data';
 import { createEntity, stepEntity, type World } from './machines';
 import type { BuildingKind, Dir, Entity, ItemId } from './types';
 import { generateTerrain, isBuildableTile, MAX_ZONE, Tile, VOID_ZONE, type Terrain } from './world';
@@ -135,6 +135,11 @@ export class Game implements World {
     return true;
   }
 
+  /** Requisitos ainda não cumpridos: tecnologia pesquisada ou `mkN` (versão de máquinas N já liberada). */
+  missingRequirements(requires: readonly string[] = []): string[] {
+    return requires.filter((id) => (id.startsWith('mk') ? this.machineTier < Number(id.slice(2)) : !this.researched.has(id)));
+  }
+
   /** Pontos que a próxima versão de máquina custa; undefined se já está no máximo. */
   nextTierCost(): number | undefined {
     return this.machineTier < MAX_TIER ? tierCost(this.machineTier + 1) : undefined;
@@ -142,7 +147,7 @@ export class Game implements World {
 
   canResearchTier(): boolean {
     const cost = this.nextTierCost();
-    return cost !== undefined && this.score >= cost;
+    return cost !== undefined && this.score >= cost && this.missingRequirements(tierRequires(this.machineTier + 1)).length === 0;
   }
 
   /** Gasta pontos do placar para liberar a próxima versão de máquina (+10% de desempenho). */
@@ -156,7 +161,7 @@ export class Game implements World {
   canResearch(techId: string): boolean {
     const tech = TECHS.find((t) => t.id === techId);
     if (!tech || this.researched.has(techId)) return false;
-    if (tech.requires && !this.researched.has(tech.requires)) return false;
+    if (this.missingRequirements(tech.requires).length > 0) return false;
     if (tech.effect === 'expand_land' && this.unlockedZone >= MAX_ZONE) return false;
     return this.score >= tech.cost;
   }

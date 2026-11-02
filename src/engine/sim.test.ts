@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEM_VALUE, REMOVAL_COST, tierBoost, tierCost } from './data';
+import { ITEM_VALUE, MAX_TIER, REMOVAL_COST, TECHS, tierBoost, tierCost } from './data';
 import { offerItem } from './machines';
 import { Game } from './sim';
 import { isBuildableTile, Tile, VOID_ZONE } from './world';
@@ -44,6 +44,18 @@ function research(game: Game, ...techs: string[]): void {
     expect(game.research(tech), tech).toBe(true);
   }
   game.score = before;
+}
+
+/** Pesquisa o que cada versão de máquina exige e depois a própria versão, sem alterar o placar do teste. */
+const TIER_TECHS: Record<number, string[]> = { 2: ['smelting', 'assembly'], 3: ['logistics', 'smelting_copper', 'wiring', 'electronics'] };
+function grantTier(game: Game, tier: number): void {
+  for (let t = game.machineTier + 1; t <= tier; t++) {
+    research(game, ...TIER_TECHS[t].filter((id) => !game.researched.has(id)));
+    const before = game.score;
+    game.score = 1e9;
+    expect(game.researchTier(), `Mk${t}`).toBe(true);
+    game.score = before;
+  }
 }
 
 describe('valores', () => {
@@ -100,7 +112,7 @@ describe('construção', () => {
     const outer = Array.from({ length: width * height }, (_, i) => i).find((i) => zones[i] === 1 && isBuildableTile(game.terrain.tiles[i]))!;
     const [ox, oy] = [outer % width, Math.floor(outer / width)];
     expect(game.place('conveyor', ox, oy, 0)).toBe('out_of_zone');
-    research(game, 'smelting', 'assembly', 'land_1');
+    research(game, 'smelting', 'assembly', 'logistics', 'land_1');
     expect(game.unlockedZone).toBe(1);
     expect(game.place('conveyor', ox, oy, 0)).toBe('ok');
   });
@@ -259,6 +271,7 @@ describe('versões Mk', () => {
 
   it('a pesquisa gasta pontos do placar, na ordem, e só com saldo', () => {
     const game = new Game(SEED);
+    research(game, 'smelting', 'assembly');
     game.score = 1999;
     expect(game.researchTier()).toBe(false);
     game.score = 2500;
@@ -269,13 +282,32 @@ describe('versões Mk', () => {
     expect(game.researchTier()).toBe(false);
   });
 
+  it('cada versão exige tecnologias: Mk2 Montagem, Mk3 Eletrônica, Mk4 Robótica + Expansão II', () => {
+    const game = new Game(SEED);
+    game.score = 1e12;
+    expect(game.researchTier()).toBe(false); // Mk2 sem Montagem
+    research(game, 'smelting', 'assembly');
+    game.score = 1e12;
+    expect(game.researchTier()).toBe(true);
+    expect(game.researchTier()).toBe(false); // Mk3 sem Eletrônica
+    expect(game.missingRequirements(['electronics'])).toEqual(['electronics']);
+    grantTier(game, 3);
+    game.score = 1e12;
+    expect(game.researchTier()).toBe(false); // Mk4 sem Robótica e Expansão II
+    for (const tech of ['land_1', 'land_2', 'robotics']) {
+      game.score = 1e12;
+      expect(game.research(tech), tech).toBe(true);
+    }
+    game.score = 1e12;
+    expect(game.researchTier()).toBe(true);
+    expect(game.machineTier).toBe(4);
+  });
+
   it('só constrói versões já pesquisadas; logística e Central ficam na Mk1', () => {
     const game = new Game(SEED);
     const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
     expect(game.place('miner', x, y, 0, 2)).toBe('locked');
-    game.score = 100000;
-    game.researchTier();
-    game.researchTier();
+    grantTier(game, 3);
     expect(game.machineTier).toBe(3);
     expect(game.place('miner', x, y, 0, 4)).toBe('locked');
     expect(game.place('miner', x, y, 0, 3)).toBe('ok');
@@ -287,9 +319,7 @@ describe('versões Mk', () => {
   it('a mineradora Mk3 rende 20% a mais que a Mk1 no mesmo sítio', () => {
     const delivered = (mk: number) => {
       const game = new Game(SEED);
-      game.score = 100000;
-      game.researchTier();
-      game.researchTier();
+      grantTier(game, 3);
       const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
       game.place('miner', x, y, 0, mk);
       game.place('hub', x + 2, y, 0);
@@ -300,5 +330,50 @@ describe('versões Mk', () => {
     const upgraded = delivered(3);
     expect(upgraded / base).toBeGreaterThan(1.15);
     expect(upgraded / base).toBeLessThan(1.25);
+  });
+});
+
+describe('árvore de requisitos', () => {
+  const ids = new Set(TECHS.map((t) => t.id));
+
+  it('tem requisitos de 2 e de 3 tecnologias', () => {
+    expect(TECHS.some((t) => t.requires?.length === 2)).toBe(true);
+    expect(TECHS.some((t) => t.requires?.length === 3)).toBe(true);
+  });
+
+  it('só referencia tecnologias existentes ou versões válidas', () => {
+    for (const tech of TECHS) {
+      for (const id of tech.requires ?? []) {
+        const mk = /^mk(\d+)$/.exec(id);
+        expect(ids.has(id) || (mk && Number(mk[1]) >= 2 && Number(mk[1]) <= MAX_TIER), `${tech.id} -> ${id}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('é possível pesquisar tudo, em alguma ordem (sem ciclos nem travas)', () => {
+    const game = new Game(SEED);
+    let progress = true;
+    while (progress) {
+      progress = false;
+      game.score = 1e12;
+      for (const tech of TECHS) if (game.research(tech.id)) progress = true;
+      if (game.researchTier()) progress = true;
+    }
+    expect(game.researched.size).toBe(TECHS.length);
+    expect(game.machineTier).toBe(MAX_TIER);
+    expect(game.unlockedZone).toBe(3);
+  });
+
+  it('exige TODOS os requisitos (2 em Eletrônica, 3 em Robótica)', () => {
+    const game = new Game(SEED);
+    game.score = 1e12;
+    for (const tech of ['smelting', 'logistics', 'assembly', 'smelting_copper']) expect(game.research(tech), tech).toBe(true);
+    expect(game.research('electronics')).toBe(false); // falta Fiação (tem Logística)
+    expect(game.research('wiring')).toBe(true);
+    expect(game.research('electronics')).toBe(true); // Fiação + Logística
+    expect(game.research('land_1')).toBe(true);
+    expect(game.research('robotics')).toBe(false); // tem Eletrônica e Expansão I, falta Mk2
+    expect(game.researchTier()).toBe(true);
+    expect(game.research('robotics')).toBe(true);
   });
 });

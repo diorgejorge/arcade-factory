@@ -8,8 +8,11 @@ import {
   RECIPE_LABEL,
   REMOVAL_COST,
   TECHS,
+  TECHS_BY_DEPTH,
   TIERED_KINDS,
   TIER_BONUS,
+  requirementLabel,
+  tierRequires,
 } from '../engine/data';
 import { TICK_RATE, type Game } from '../engine/sim';
 import type { BuildingKind, Entity } from '../engine/types';
@@ -35,6 +38,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', ...ch
   if (className) node.className = className;
   node.append(...children);
   return node;
+}
+
+/** Lista de requisitos com ✓ (cumprido) e ✗ (falta), só quando há algum. */
+function requirementsLine(requires: readonly string[] | undefined, missing: readonly string[]): HTMLElement[] {
+  if (!requires?.length) return [];
+  const parts = requires.map((id) => el('span', missing.includes(id) ? 'short' : '', `${missing.includes(id) ? '✗' : '✓'} ${requirementLabel(id)}`));
+  return [el('div', 'muted', 'Requer: ', ...parts.flatMap((part, i) => (i ? [' · ', part] : [part])))];
 }
 
 function formatTime(ticks: number): string {
@@ -109,17 +119,16 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
       if (game.researchTier()) state.mk = game.machineTier;
     };
     const detail = cost === undefined ? el('div', 'muted', 'Todas as versões liberadas.') : el('div', game.canResearchTier() ? 'cost' : 'cost short', `Custa ${cost.toLocaleString('pt-BR')} pontos do placar`);
-    return el('div', 'tech', el('b', '', `Máquinas Mk${game.machineTier + (cost === undefined ? 0 : 1)}`), el('div', 'muted', `+${Math.round(TIER_BONUS * 100)}% de desempenho (minerar e produzir)`), detail, button);
+    return el('div', 'tech', el('b', '', `Máquinas Mk${game.machineTier + (cost === undefined ? 0 : 1)}`), el('div', 'muted', `+${Math.round(TIER_BONUS * 100)}% de desempenho (minerar e produzir)`), detail, ...(cost === undefined ? [] : requirementsLine(tierRequires(game.machineTier + 1), game.missingRequirements(tierRequires(game.machineTier + 1)))), button);
   }
 
   function buildResearch(): Child[] {
-    const cards = TECHS.map((tech) => {
+    const cards = TECHS_BY_DEPTH.map((tech) => {
       const done = game.researched.has(tech.id);
-      const missing = tech.requires && !game.researched.has(tech.requires) ? TECHS.find((t) => t.id === tech.requires)!.name : undefined;
       const button = el('button', '', done ? 'Concluída' : 'Pesquisar');
       button.disabled = done || !game.canResearch(tech.id);
       button.onclick = () => game.research(tech.id);
-      const details = done ? [] : [el('div', game.score >= tech.cost ? 'cost' : 'cost short', `Custa ${tech.cost.toLocaleString('pt-BR')} pontos do placar`), ...(missing ? [el('div', 'muted', `Requer: ${missing}`)] : [])];
+      const details = done ? [] : [el('div', game.score >= tech.cost ? 'cost' : 'cost short', `Custa ${tech.cost.toLocaleString('pt-BR')} pontos do placar`), ...requirementsLine(tech.requires, game.missingRequirements(tech.requires))];
       return el('div', `tech${done ? ' done' : ''}`, el('b', '', tech.name), ...details, button);
     });
     return [el('h3', '', 'Pesquisa'), tierCard(), ...cards];
@@ -150,7 +159,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
 
     syncSection(toolbar, `${state.tool}|${state.mk}|${game.machineTier}|${BUILDING_ORDER.map((k) => +game.isBuildingUnlocked(k)).join('')}`, buildToolbar);
     syncSection(inventorySection, JSON.stringify(game.inventory), buildInventory);
-    const researchSig = `${game.machineTier}${+game.canResearchTier()}|` + TECHS.map((t) => `${+game.researched.has(t.id)}${+game.canResearch(t.id)}${+(game.score >= t.cost)}`).join('|');
+    const researchSig = `${game.machineTier}${+game.canResearchTier()}${+(game.score >= (game.nextTierCost() ?? Infinity))}|` + TECHS.map((t) => `${+game.researched.has(t.id)}${+game.canResearch(t.id)}${+(game.score >= t.cost)}${game.missingRequirements(t.requires).length}`).join('|');
     syncSection(researchSection, researchSig, buildResearch);
     const e = state.selected;
     syncSection(selectionSection, e ? `${e.id}|${e.mk}|${e.recipeId}|${TECHS.filter((t) => game.researched.has(t.id)).length}` : 'none', buildSelection);
