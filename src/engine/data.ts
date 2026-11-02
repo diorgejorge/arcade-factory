@@ -43,6 +43,17 @@ export const BUILDING_SIZE: Record<BuildingKind, number> = {
   router: 1,
 };
 
+/** Pontos descontados do placar ao remover uma construção (nunca deixa o placar abaixo de zero). */
+export const REMOVAL_COST: Record<BuildingKind, number> = {
+  conveyor: 2,
+  junction: 6,
+  router: 6,
+  miner: 40,
+  furnace: 60,
+  assembler: 150,
+  hub: 100,
+};
+
 /** Multiplicador de velocidade de produção das máquinas. */
 export const CRAFT_SPEED: Partial<Record<BuildingKind, number>> = { furnace: 3, assembler: 4 };
 

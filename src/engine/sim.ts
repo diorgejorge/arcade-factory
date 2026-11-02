@@ -1,4 +1,4 @@
-import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, RECIPES, STARTING_BUILDINGS, TECHS } from './data';
+import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS } from './data';
 import { createEntity, stepEntity, type World } from './machines';
 import type { BuildingKind, Dir, Entity, ItemId } from './types';
 import { generateTerrain, isBuildableTile, MAX_ZONE, Tile, VOID_ZONE, type Terrain } from './world';
@@ -96,15 +96,17 @@ export class Game implements World {
     return 'ok';
   }
 
-  /** Remove a construção que cobre a célula (x, y). */
-  remove(x: number, y: number): boolean {
+  /** Remove a construção que cobre a célula (x, y) e desconta o custo de remoção do placar. */
+  remove(x: number, y: number): { kind: BuildingKind; charged: number } | undefined {
     const entity = this.entityAt(x, y);
-    if (!entity) return false;
+    if (!entity) return undefined;
     for (let cy = entity.y; cy < entity.y + entity.size; cy++) {
       for (let cx = entity.x; cx < entity.x + entity.size; cx++) this.grid[cy * this.terrain.width + cx] = undefined;
     }
     this.entities.splice(this.entities.indexOf(entity), 1);
-    return true;
+    const charged = Math.min(this.score, REMOVAL_COST[entity.kind]);
+    this.score -= charged;
+    return { kind: entity.kind, charged };
   }
 
   rotate(x: number, y: number): void {

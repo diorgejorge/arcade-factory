@@ -21,7 +21,7 @@ const PLACE_MESSAGES: Record<PlaceResult, string> = {
 type Cell = { x: number; y: number };
 
 const game = new Game(SEASON_SEED);
-const state: UiState = { tool: null, selected: null, speed: 1 };
+const state: UiState = { tool: null, selected: null };
 let toolDir: Dir = 0;
 let hover: Cell | undefined;
 
@@ -33,7 +33,6 @@ const ui = createUi(game, state, {
     state.selected = null;
     updateGhost();
   },
-  setSpeed: (speed) => (state.speed = speed),
 });
 
 if (import.meta.env.DEV) Object.assign(window, { __game: game, __world: world, __state: state });
@@ -77,14 +76,16 @@ function dragConveyor(from: Cell, to: Cell): void {
   build('conveyor', to, dir);
 }
 
+/** Remove só com clique (sem arrastar), porque cada remoção custa pontos. */
 function erase(cell: Cell, entity?: Entity): void {
-  game.remove(entity?.x ?? cell.x, entity?.y ?? cell.y);
+  const removed = game.remove(entity?.x ?? cell.x, entity?.y ?? cell.y);
+  if (removed) ui.showHint(removed.charged ? `Removido: -${removed.charged} pontos.` : 'Removido (sem custo: placar zerado).');
   if (state.selected && !game.entities.includes(state.selected)) state.selected = null;
 }
 
 // ---------- entrada ----------
 
-type Drag = { mode: 'build' | 'erase' | 'pan'; last: Cell; px: number; py: number };
+type Drag = { mode: 'build' | 'pan'; last: Cell; px: number; py: number };
 let drag: Drag | null = null;
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -95,7 +96,6 @@ canvas.addEventListener('mousedown', (e) => {
     drag = { mode: 'pan', last: tile, px: e.clientX, py: e.clientY };
   } else if (e.button === 2) {
     erase(tile, entity);
-    drag = { mode: 'erase', last: tile, px: e.clientX, py: e.clientY };
   } else if (e.button === 0) {
     if (state.tool) {
       build(state.tool, tile, toolDir);
@@ -108,15 +108,14 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('mousemove', (e) => {
-  const { tile, entity } = world.pick(e.clientX, e.clientY);
+  const { tile } = world.pick(e.clientX, e.clientY);
   hover = tile;
   if (drag?.mode === 'pan') {
     world.panDrag(e.clientX - drag.px, e.clientY - drag.py);
     drag.px = e.clientX;
     drag.py = e.clientY;
   } else if (drag && (tile.x !== drag.last.x || tile.y !== drag.last.y)) {
-    if (drag.mode === 'erase') erase(tile, entity);
-    else if (state.tool === 'conveyor') dragConveyor(drag.last, tile);
+    if (state.tool === 'conveyor') dragConveyor(drag.last, tile);
     else if (state.tool) build(state.tool, tile, toolDir);
     drag.last = tile;
   }
@@ -143,9 +142,6 @@ window.addEventListener('keydown', (e) => {
   } else if (key === 'r') {
     if (state.tool) toolDir = ((toolDir + 1) % 4) as Dir;
     else if (state.selected) game.rotate(state.selected.x, state.selected.y);
-  } else if (key === ' ') {
-    state.speed = state.speed === 0 ? 1 : 0;
-    e.preventDefault();
   }
   updateGhost();
 });
@@ -161,7 +157,7 @@ let accumulator = 0;
 /** Avança o jogo `elapsed` ms e desenha (`draw = false` só simula, útil em testes). */
 function advance(elapsed: number, draw = true): void {
   world.panKeys(heldKeys, elapsed / 1000);
-  accumulator += elapsed * state.speed;
+  accumulator += elapsed;
   let steps = 0;
   while (accumulator >= TICK_MS && steps < MAX_STEPS_PER_FRAME) {
     game.step();
@@ -171,7 +167,7 @@ function advance(elapsed: number, draw = true): void {
   if (steps === MAX_STEPS_PER_FRAME) accumulator = 0;
   if (!draw) return;
   world.setSelected(state.selected);
-  world.render(state.speed === 0 ? 1 : accumulator / TICK_MS, (elapsed / 1000) * state.speed);
+  world.render(accumulator / TICK_MS, elapsed / 1000);
 }
 
 function frame(now: number): void {

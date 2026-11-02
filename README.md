@@ -15,13 +15,14 @@ npm run build   # typecheck + build de produção
 ## Como jogar
 
 - **1–7**: escolhe a construção (Mineradora, Esteira, Junção, Roteador, Fornalha, Montadora, Central). **R** gira. **Q/Esc** cancela.
-- **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho) ou seleciona a máquina; **direito** remove; **WASD/setas** ou **botão do meio** movem a câmera; **roda** dá zoom; **espaço** pausa.
+- **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho) ou seleciona a máquina; **direito** remove; **WASD/setas** ou **botão do meio** movem a câmera; **roda** dá zoom. Não há pausa nem aceleração: o relógio é o mesmo para todos na temporada.
 - Mineradoras só funcionam sobre minério e rendem **por tile de minério** sob elas (2x2: de 1 a 4). Máquinas despejam o que produzem em qualquer célula da borda para onde estão viradas.
 - Tamanhos: mineradora 2x2, fornalha 2x2, montadora 3x3, central 2x2; esteira, junção e roteador 1x1. Espaço é o recurso escasso.
 - **Junção** cruza duas esteiras (cada item segue em linha reta). **Roteador** reparte itens em revezamento entre as saídas.
 - A ilha tem 4 zonas. Só a central está liberada no início; as pesquisas **Expansão I–III** liberam as de fora.
 - Itens entregues na Central viram pontos **e** estoque; o estoque paga as pesquisas (painel lateral), que desbloqueiam novas máquinas e receitas.
 - Clique numa montadora para escolher a receita.
+- **Remover custa pontos** (por tipo de construção; o placar nunca fica negativo). Só remove com clique direito, sem arrastar.
 
 ## Pontuação
 

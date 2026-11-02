@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEM_VALUE } from './data';
+import { ITEM_VALUE, REMOVAL_COST } from './data';
 import { offerItem } from './machines';
 import { Game } from './sim';
 import { isBuildableTile, Tile, VOID_ZONE } from './world';
@@ -78,7 +78,7 @@ describe('construção', () => {
     const miner = game.entityAt(x, y)!;
     expect([game.entityAt(x + 1, y), game.entityAt(x, y + 1), game.entityAt(x + 1, y + 1)]).toEqual([miner, miner, miner]);
     expect(game.place('conveyor', x + 1, y + 1, 0)).toBe('occupied');
-    expect(game.remove(x + 1, y + 1)).toBe(true);
+    expect(game.remove(x + 1, y + 1)?.kind).toBe('miner');
     expect(game.entityAt(x, y)).toBeUndefined();
     expect(game.place('conveyor', x + 1, y + 1, 0)).toBe('ok');
   });
@@ -101,6 +101,25 @@ describe('construção', () => {
     research(game, 'smelting', 'assembly', 'land_1');
     expect(game.unlockedZone).toBe(1);
     expect(game.place('conveyor', ox, oy, 0)).toBe('ok');
+  });
+});
+
+describe('remoção', () => {
+  it('custa pontos por tipo de construção e o placar nunca fica negativo', () => {
+    const game = new Game(SEED);
+    const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
+    game.place('conveyor', x + 2, y, 0);
+    game.place('miner', x, y, 0);
+    game.score = 500;
+    expect(game.remove(x + 2, y)).toEqual({ kind: 'conveyor', charged: REMOVAL_COST.conveyor });
+    expect(game.score).toBe(500 - REMOVAL_COST.conveyor);
+    expect(game.remove(x, y)).toEqual({ kind: 'miner', charged: REMOVAL_COST.miner });
+    expect(game.score).toBe(500 - REMOVAL_COST.conveyor - REMOVAL_COST.miner);
+    game.place('miner', x, y, 0);
+    game.score = 7;
+    expect(game.remove(x, y)).toEqual({ kind: 'miner', charged: 7 }); // cobra só o que há
+    expect(game.score).toBe(0);
+    expect(game.remove(x, y)).toBeUndefined(); // nada a remover, nada a cobrar
   });
 });
 

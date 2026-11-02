@@ -6,6 +6,7 @@ import {
   ITEM_VALUE,
   RECIPES,
   RECIPE_LABEL,
+  REMOVAL_COST,
   TECHS,
 } from '../engine/data';
 import { TICK_RATE, type Game } from '../engine/sim';
@@ -15,15 +16,12 @@ import { iconFor } from './sprites';
 export interface UiState {
   tool: BuildingKind | null;
   selected: Entity | null;
-  speed: number;
 }
 
 export interface UiActions {
   selectTool(kind: BuildingKind | null): void;
-  setSpeed(speed: number): void;
 }
 
-export const SPEEDS = [0, 1, 2, 4] as const;
 const DEFAULT_HINT = 'Botão esquerdo: construir · direito: remover · WASD: mover · roda: zoom · R: girar · Q: cancelar';
 
 type Child = Node | string;
@@ -64,12 +62,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
 
   const scoreValue = el('b');
   const timeValue = el('span');
-  const speedButtons = SPEEDS.map((speed) => {
-    const button = el('button', '', speed === 0 ? '⏸' : `x${speed}`);
-    button.onclick = () => actions.setSpeed(speed);
-    return button;
-  });
-  hud.append(el('span', '', 'Pontos ', scoreValue), el('span', '', 'Tempo ', timeValue), el('span', '', ...speedButtons));
+  hud.append(el('span', '', 'Pontos ', scoreValue), el('span', '', 'Tempo ', timeValue));
 
   const inventorySection = el('section');
   const researchSection = el('section');
@@ -127,13 +120,13 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
     } else {
       nodes.push(el('div', 'muted', 'R gira a máquina.'));
     }
+    nodes.push(el('div', 'muted', `Remover custa ${REMOVAL_COST[entity.kind]} pontos.`));
     return nodes;
   }
 
   function refresh(): void {
     scoreValue.textContent = Math.floor(game.score).toLocaleString('pt-BR');
     timeValue.textContent = formatTime(game.tick);
-    speedButtons.forEach((button, i) => button.classList.toggle('active', SPEEDS[i] === state.speed));
 
     syncSection(toolbar, `${state.tool}|${BUILDING_ORDER.map((k) => +game.isBuildingUnlocked(k)).join('')}`, buildToolbar);
     syncSection(inventorySection, JSON.stringify(game.inventory), buildInventory);
