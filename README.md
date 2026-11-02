@@ -15,7 +15,7 @@ npm run build   # typecheck + build de produção
 ## Como jogar
 
 - **1–7**: escolhe a construção (Mineradora, Esteira, Junção, Roteador, Fornalha, Montadora, Central). **R** gira. **Q/Esc** cancela.
-- **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho); **direito** remove; **WASD/setas** movem; **roda** dá zoom; **espaço** pausa.
+- **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho) ou seleciona a máquina; **direito** remove; **WASD/setas** ou **botão do meio** movem a câmera; **roda** dá zoom; **espaço** pausa.
 - Mineradoras só funcionam sobre minério e rendem **por tile de minério** sob elas (2x2: de 1 a 4). Máquinas despejam o que produzem em qualquer célula da borda para onde estão viradas.
 - Tamanhos: mineradora 2x2, fornalha 2x2, montadora 3x3, central 2x2; esteira, junção e roteador 1x1. Espaço é o recurso escasso.
 - **Junção** cruza duas esteiras (cada item segue em linha reta). **Roteador** reparte itens em revezamento entre as saídas.
@@ -30,8 +30,9 @@ npm run build   # typecheck + build de produção
 ## Arquitetura
 
 - `src/engine/` — simulação pura e determinística (sem DOM), 20 ticks/s; ilha 40x30 gerada por seed, com zonas expansíveis. Mesma seed + mesmos comandos = mesmo resultado, para o servidor poder validar o ranking rodando o mesmo código.
-- `src/client/` — cliente 2D atual (canvas), a ser substituído pelo 3D voxel.
-- `src/client3d/` — modelos 3D das máquinas (Three.js), reutilizáveis pelo jogo. `prototypes/voxel/` é a cena de demonstração.
+- `src/client3d/` — renderizador voxel (Three.js): ilha gerada do terreno do motor (`world3d.ts`) e modelos animados das máquinas (`models.ts`). Cada máquina é escalada ao tamanho da sua área.
+- `src/client/` — entrada do mouse/teclado e interface (barra de construção, pesquisa, estoque).
+- `prototypes/voxel/` — cena de demonstração isolada.
 
 ## Próximos passos
 

@@ -8,7 +8,7 @@
   --ok: #5fd38d;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: linear-gradient(#6fb4f0, #cfe8fb 70%, #eaf5ff); color: var(--text); font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
 canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: crosshair; }
 #hud, #toolbar, #side, #hint { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
 #hud { top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 18px; align-items: center; }
