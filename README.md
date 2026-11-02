@@ -21,7 +21,7 @@ npm run build   # typecheck + build de produção
 - **Junção** cruza duas esteiras (cada item segue em linha reta). **Roteador** reparte itens em revezamento entre as saídas.
 - **Versões Mk:** a pesquisa *Máquinas Mk2, Mk3...* custa **pontos do placar** (2000, 5000, 12500...) e libera versões de mineradora, fornalha e montadora com **+10% de desempenho por versão** (Mk4 = +30%). Ao construir, escolha a versão na barra; máquinas já construídas não sobem de versão sozinhas.
 - A ilha tem 4 zonas. Só a central está liberada no início; as pesquisas **Expansão I–III** liberam as de fora.
-- Itens entregues na Central viram pontos **e** estoque; o estoque paga as pesquisas (painel lateral), que desbloqueiam novas máquinas e receitas.
+- Itens entregues na Central viram pontos. **Toda pesquisa custa pontos do placar** e exige uma tecnologia anterior (a árvore mostra o pré-requisito de cada uma); elas desbloqueiam máquinas, receitas e expansões da ilha.
 - Clique numa montadora para escolher a receita.
 - **Remover custa pontos** (por tipo de construção; o placar nunca fica negativo). Só remove com clique direito, sem arrastar.
 

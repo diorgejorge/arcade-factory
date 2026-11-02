@@ -33,7 +33,9 @@ export interface Recipe {
 export interface Tech {
   id: string;
   name: string;
-  cost: ItemCounts;
+  /** Pontos do placar gastos para pesquisar. */
+  cost: number;
+  /** Tecnologia que precisa estar pesquisada antes. */
   requires?: string;
   buildings?: BuildingKind[];
   recipes?: string[];

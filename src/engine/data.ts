@@ -94,16 +94,17 @@ export const FURNACE_RECIPE_BY_INPUT: Partial<Record<ItemId, Recipe>> = Object.f
     .map((recipe) => [Object.keys(recipe.inputs)[0], recipe]),
 );
 
+/** Árvore de pesquisa: todas custam pontos do placar (valor de antes: os itens que cada uma pedia) e exigem a anterior. */
 export const TECHS: readonly Tech[] = [
-  { id: 'smelting', name: 'Fundição', cost: { iron_ore: 30 }, buildings: ['furnace'], recipes: ['smelt_iron', 'smelt_copper'] },
-  { id: 'logistics', name: 'Logística', cost: { iron_plate: 25 }, requires: 'smelting', buildings: ['junction', 'router'] },
-  { id: 'assembly', name: 'Montagem', cost: { iron_plate: 40 }, requires: 'smelting', buildings: ['assembler'], recipes: ['gear'] },
-  { id: 'land_1', name: 'Expansão I', cost: { iron_plate: 80 }, requires: 'assembly', effect: 'expand_land' },
-  { id: 'electronics', name: 'Eletrônica', cost: { gear: 20, copper_plate: 30 }, requires: 'assembly', recipes: ['wire', 'circuit'] },
-  { id: 'land_2', name: 'Expansão II', cost: { gear: 40, copper_plate: 60 }, requires: 'land_1', effect: 'expand_land' },
-  { id: 'robotics', name: 'Robótica', cost: { circuit: 20, gear: 20 }, requires: 'electronics', recipes: ['motor'] },
-  { id: 'land_3', name: 'Expansão III', cost: { circuit: 40, gear: 40 }, requires: 'land_2', effect: 'expand_land' },
-  { id: 'overclock', name: 'Overclock', cost: { motor: 5 }, requires: 'robotics', effect: 'miner_boost' },
+  { id: 'smelting', name: 'Fundição', cost: 30, buildings: ['furnace'], recipes: ['smelt_iron', 'smelt_copper'] },
+  { id: 'logistics', name: 'Logística', cost: 50, requires: 'smelting', buildings: ['junction', 'router'] },
+  { id: 'assembly', name: 'Montagem', cost: 80, requires: 'smelting', buildings: ['assembler'], recipes: ['gear'] },
+  { id: 'land_1', name: 'Expansão I', cost: 160, requires: 'assembly', effect: 'expand_land' },
+  { id: 'electronics', name: 'Eletrônica', cost: 220, requires: 'assembly', recipes: ['wire', 'circuit'] },
+  { id: 'land_2', name: 'Expansão II', cost: 440, requires: 'land_1', effect: 'expand_land' },
+  { id: 'robotics', name: 'Robótica', cost: 480, requires: 'electronics', recipes: ['motor'] },
+  { id: 'land_3', name: 'Expansão III', cost: 960, requires: 'land_2', effect: 'expand_land' },
+  { id: 'overclock', name: 'Overclock', cost: 320, requires: 'robotics', effect: 'miner_boost' },
 ];
 
 /** Cada nível de transformação multiplica o valor dos ingredientes por este fator. */

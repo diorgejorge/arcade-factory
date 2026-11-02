@@ -12,7 +12,7 @@ import {
   TIER_BONUS,
 } from '../engine/data';
 import { TICK_RATE, type Game } from '../engine/sim';
-import type { BuildingKind, Entity, ItemCounts, ItemId } from '../engine/types';
+import type { BuildingKind, Entity } from '../engine/types';
 import { iconFor } from './sprites';
 
 export interface UiState {
@@ -35,15 +35,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', ...ch
   if (className) node.className = className;
   node.append(...children);
   return node;
-}
-
-function formatCost(cost: ItemCounts, game: Game): HTMLElement {
-  const line = el('div', 'cost');
-  Object.entries(cost).forEach(([item, count], index) => {
-    const have = game.inventory[item as ItemId];
-    line.append(index ? ', ' : '', el('span', have < count ? 'short' : '', `${have}/${count} ${ITEM_LABEL[item as ItemId]}`));
-  });
-  return line;
 }
 
 function formatTime(ticks: number): string {
@@ -106,7 +97,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
     const rows = ITEM_IDS.filter((item) => game.inventory[item] > 0).map((item) =>
       el('div', 'row', el('span', '', ITEM_LABEL[item]), el('span', 'muted', `${game.inventory[item]} · ${ITEM_VALUE[item]} pts`)),
     );
-    return [el('h3', '', 'Central (estoque)'), ...(rows.length ? rows : [el('div', 'muted', 'Entregue itens na Central.')])];
+    return [el('h3', '', 'Entregues na Central'), ...(rows.length ? rows : [el('div', 'muted', 'Entregue itens na Central.')])];
   }
 
   /** Melhoria de máquinas: gasta pontos do placar (não itens) e libera a próxima versão Mk. */
@@ -124,11 +115,12 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
   function buildResearch(): Child[] {
     const cards = TECHS.map((tech) => {
       const done = game.researched.has(tech.id);
-      const available = !tech.requires || game.researched.has(tech.requires);
+      const missing = tech.requires && !game.researched.has(tech.requires) ? TECHS.find((t) => t.id === tech.requires)!.name : undefined;
       const button = el('button', '', done ? 'Concluída' : 'Pesquisar');
       button.disabled = done || !game.canResearch(tech.id);
       button.onclick = () => game.research(tech.id);
-      return el('div', `tech${done ? ' done' : ''}`, el('b', '', tech.name), done ? '' : available ? formatCost(tech.cost, game) : el('div', 'muted', 'Requer outra pesquisa'), button);
+      const details = done ? [] : [el('div', game.score >= tech.cost ? 'cost' : 'cost short', `Custa ${tech.cost.toLocaleString('pt-BR')} pontos do placar`), ...(missing ? [el('div', 'muted', `Requer: ${missing}`)] : [])];
+      return el('div', `tech${done ? ' done' : ''}`, el('b', '', tech.name), ...details, button);
     });
     return [el('h3', '', 'Pesquisa'), tierCard(), ...cards];
   }
@@ -158,7 +150,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
 
     syncSection(toolbar, `${state.tool}|${state.mk}|${game.machineTier}|${BUILDING_ORDER.map((k) => +game.isBuildingUnlocked(k)).join('')}`, buildToolbar);
     syncSection(inventorySection, JSON.stringify(game.inventory), buildInventory);
-    const researchSig = `${game.machineTier}${+game.canResearchTier()}|` + TECHS.map((t) => `${+game.researched.has(t.id)}${+game.canResearch(t.id)}${JSON.stringify(game.inventory)}`).join('|');
+    const researchSig = `${game.machineTier}${+game.canResearchTier()}|` + TECHS.map((t) => `${+game.researched.has(t.id)}${+game.canResearch(t.id)}${+(game.score >= t.cost)}`).join('|');
     syncSection(researchSection, researchSig, buildResearch);
     const e = state.selected;
     syncSection(selectionSection, e ? `${e.id}|${e.mk}|${e.recipeId}|${TECHS.filter((t) => game.researched.has(t.id)).length}` : 'none', buildSelection);

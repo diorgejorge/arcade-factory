@@ -158,14 +158,14 @@ export class Game implements World {
     if (!tech || this.researched.has(techId)) return false;
     if (tech.requires && !this.researched.has(tech.requires)) return false;
     if (tech.effect === 'expand_land' && this.unlockedZone >= MAX_ZONE) return false;
-    return Object.entries(tech.cost).every(([item, count]) => this.inventory[item as ItemId] >= count);
+    return this.score >= tech.cost;
   }
 
-  /** Gasta itens entregues na Central para desbloquear uma tecnologia. */
+  /** Gasta pontos do placar para desbloquear uma tecnologia (exige o pré-requisito). */
   research(techId: string): boolean {
     if (!this.canResearch(techId)) return false;
     const tech = TECHS.find((t) => t.id === techId)!;
-    for (const [item, count] of Object.entries(tech.cost)) this.inventory[item as ItemId] -= count;
+    this.score -= tech.cost;
     this.researched.add(techId);
     tech.buildings?.forEach((building) => this.unlockedBuildings.add(building));
     tech.recipes?.forEach((recipe) => this.unlockedRecipes.add(recipe));

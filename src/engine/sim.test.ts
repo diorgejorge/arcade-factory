@@ -36,12 +36,14 @@ function runTicks(game: Game, ticks: number): void {
   for (let i = 0; i < ticks; i++) game.step();
 }
 
+/** Pesquisa as tecnologias dadas sem alterar o placar do teste (dá saldo só no momento de pesquisar). */
 function research(game: Game, ...techs: string[]): void {
+  const before = game.score;
   for (const tech of techs) {
-    game.inventory.iron_ore += 100; game.inventory.iron_plate += 200; game.inventory.gear += 100;
-    game.inventory.copper_plate += 100; game.inventory.circuit += 100;
+    game.score = 1e9;
     expect(game.research(tech), tech).toBe(true);
   }
+  game.score = before;
 }
 
 describe('valores', () => {
@@ -154,7 +156,6 @@ describe('produção', () => {
   it('fornalha transforma minério em placa e vale mais', () => {
     const game = new Game(SEED);
     research(game, 'smelting');
-    game.inventory.iron_ore = 0; game.inventory.iron_plate = 0; game.inventory.gear = 0; game.inventory.copper_plate = 0; game.inventory.circuit = 0;
     const { x, y } = findSite(game, 6, 2, pureOre(game, Tile.Iron, 4));
     game.place('miner', x, y, 0);
     game.place('furnace', x + 2, y, 0);
@@ -217,17 +218,27 @@ describe('logística', () => {
 });
 
 describe('pesquisa', () => {
-  it('respeita pré-requisitos e custo', () => {
+  it('gasta pontos do placar e exige a tecnologia anterior', () => {
     const game = new Game(SEED);
-    game.inventory.iron_plate = 40;
-    expect(game.research('assembly')).toBe(false); // falta fundição
-    expect(game.research('smelting')).toBe(false); // falta minério
-    game.inventory.iron_ore = 30;
+    game.score = 1000;
+    expect(game.research('assembly')).toBe(false); // falta Fundição
+    game.score = 29;
+    expect(game.research('smelting')).toBe(false); // falta 1 ponto
+    game.score = 30;
     expect(game.research('smelting')).toBe(true);
-    expect(game.inventory.iron_ore).toBe(0);
+    expect(game.score).toBe(0);
     expect(game.isBuildingUnlocked('furnace')).toBe(true);
     expect(game.research('smelting')).toBe(false); // já pesquisada
+    game.score = 80;
     expect(game.research('assembly')).toBe(true);
+    expect(game.score).toBe(0);
+  });
+
+  it('itens entregues não pagam pesquisa, só pontos', () => {
+    const game = new Game(SEED);
+    game.inventory.iron_ore = 1_000_000;
+    game.score = 0;
+    expect(game.research('smelting')).toBe(false);
   });
 
   it('montadora só aceita receitas desbloqueadas', () => {
