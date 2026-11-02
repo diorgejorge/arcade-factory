@@ -1,4 +1,4 @@
-import { BUILDING_SIZE, ITEM_IDS, ITEM_VALUE, MAX_TIER, RECIPES, REMOVAL_COST, STARTING_BUILDINGS, TECHS, TIERED_KINDS, tierCost, tierRequires } from './data';
+import { BUILDING_SIZE, buildCost, ITEM_IDS, ITEM_VALUE, MAX_TIER, RECIPES, removalCost, STARTING_BUILDINGS, TECHS, TIERED_KINDS, tierCost, tierRequires } from './data';
 import { createEntity, stepEntity, type World } from './machines';
 import type { BuildingKind, Dir, Entity, ItemId } from './types';
 import { generateTerrain, isBuildableTile, MAX_ZONE, Tile, VOID_ZONE, type Terrain } from './world';
@@ -95,10 +95,11 @@ export class Game implements World {
     }
     for (let cy = y; cy < y + size; cy++) for (let cx = x; cx < x + size; cx++) this.grid[cy * this.terrain.width + cx] = entity;
     this.entities.push(entity);
+    this.score -= buildCost(kind, entity.mk); // o placar pode ficar negativo: construir é crédito
     return 'ok';
   }
 
-  /** Remove a construção que cobre a célula (x, y) e desconta o custo de remoção do placar. */
+  /** Remove a construção que cobre a célula (x, y) e desconta o custo de remoção do placar (que pode ficar negativo). */
   remove(x: number, y: number): { kind: BuildingKind; charged: number } | undefined {
     const entity = this.entityAt(x, y);
     if (!entity) return undefined;
@@ -106,7 +107,7 @@ export class Game implements World {
       for (let cx = entity.x; cx < entity.x + entity.size; cx++) this.grid[cy * this.terrain.width + cx] = undefined;
     }
     this.entities.splice(this.entities.indexOf(entity), 1);
-    const charged = Math.min(this.score, REMOVAL_COST[entity.kind]);
+    const charged = removalCost(entity.kind, entity.mk);
     this.score -= charged;
     return { kind: entity.kind, charged };
   }

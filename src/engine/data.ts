@@ -43,15 +43,15 @@ export const BUILDING_SIZE: Record<BuildingKind, number> = {
   router: 1,
 };
 
-/** Pontos descontados do placar ao remover uma construção (nunca deixa o placar abaixo de zero). */
-export const REMOVAL_COST: Record<BuildingKind, number> = {
+/** Pontos gastos para construir (Mk1). Valores provisórios, a acertar jogando. */
+export const BUILD_COST: Record<BuildingKind, number> = {
   conveyor: 2,
-  junction: 6,
-  router: 6,
-  miner: 40,
-  furnace: 60,
-  assembler: 150,
-  hub: 100,
+  junction: 8,
+  router: 8,
+  miner: 60,
+  furnace: 90,
+  assembler: 240,
+  hub: 150,
 };
 
 /** Máquinas que têm versões Mk2, Mk3... (logística e Central não têm). */
@@ -60,6 +60,13 @@ export const MAX_TIER = 8;
 /** Cada versão acima da Mk1 soma 10% de desempenho (Mk4 = +30%). */
 export const TIER_BONUS = 0.1;
 export const tierBoost = (mk: number): number => 1 + TIER_BONUS * (mk - 1);
+/** Cada versão acima da Mk1 encarece a construção em 50% do preço base (Mk4 = 2,5x) para +10% de desempenho cada. */
+const MK_COST_STEP = 0.5;
+/** Pontos gastos ao construir `kind` na versão `mk` (logística e Central não têm versões). */
+export const buildCost = (kind: BuildingKind, mk = 1): number =>
+  Math.round(BUILD_COST[kind] * (1 + MK_COST_STEP * ((TIERED_KINDS.includes(kind) ? mk : 1) - 1)));
+/** Remover custa o dobro de construir: trocar de lugar é pagar duas vezes (e mais a construção nova). */
+export const removalCost = (kind: BuildingKind, mk = 1): number => 2 * buildCost(kind, mk);
 /** Pontos para pesquisar a versão `tier` (Mk2 em diante): 2000, 5000, 12500... valores provisórios de balanceamento. */
 export const tierCost = (tier: number): number => Math.round(2000 * 2.5 ** (tier - 2));
 

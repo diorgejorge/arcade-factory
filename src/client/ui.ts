@@ -1,12 +1,13 @@
 import {
   BUILDING_LABEL,
   BUILDING_ORDER,
+  buildCost,
   ITEM_IDS,
   ITEM_LABEL,
   ITEM_VALUE,
   RECIPES,
   RECIPE_LABEL,
-  REMOVAL_COST,
+  removalCost,
   TECHS,
   TECHS_BY_DEPTH,
   TIERED_KINDS,
@@ -85,7 +86,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
   function buildToolbar(): Child[] {
     const tools: Child[] = BUILDING_ORDER.map((kind, index) => {
       const unlocked = game.isBuildingUnlocked(kind);
-      const button = el('button', `tool${state.tool === kind ? ' active' : ''}`, iconFor(kind), el('span', '', unlocked ? BUILDING_LABEL[kind] : `🔒 ${BUILDING_LABEL[kind]}`), el('kbd', '', String(index + 1)));
+      const button = el('button', `tool${state.tool === kind ? ' active' : ''}`, iconFor(kind), el('span', '', unlocked ? BUILDING_LABEL[kind] : `🔒 ${BUILDING_LABEL[kind]}`), el('small', 'price', `−${buildCost(kind, state.mk)}`), el('kbd', '', String(index + 1)));
       button.disabled = !unlocked;
       button.onclick = () => actions.selectTool(state.tool === kind ? null : kind);
       return button;
@@ -149,12 +150,13 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
       nodes.push(el('div', 'muted', 'R gira a máquina.'));
     }
     if (TIERED_KINDS.includes(entity.kind)) nodes.push(el('div', 'muted', `Mk${entity.mk}: +${Math.round(TIER_BONUS * (entity.mk - 1) * 100)}% de desempenho`));
-    nodes.push(el('div', 'muted', `Remover custa ${REMOVAL_COST[entity.kind]} pontos.`));
+    nodes.push(el('div', 'muted', `Remover custa ${removalCost(entity.kind, entity.mk)} pontos.`));
     return nodes;
   }
 
   function refresh(): void {
     scoreValue.textContent = Math.floor(game.score).toLocaleString('pt-BR');
+    scoreValue.classList.toggle('neg', game.score < 0);
     timeValue.textContent = formatTime(game.tick);
 
     syncSection(toolbar, `${state.tool}|${state.mk}|${game.machineTier}|${BUILDING_ORDER.map((k) => +game.isBuildingUnlocked(k)).join('')}`, buildToolbar);

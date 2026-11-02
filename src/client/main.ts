@@ -79,7 +79,7 @@ function dragConveyor(from: Cell, to: Cell): void {
 /** Remove só com clique (sem arrastar), porque cada remoção custa pontos. */
 function erase(cell: Cell, entity?: Entity): void {
   const removed = game.remove(entity?.x ?? cell.x, entity?.y ?? cell.y);
-  if (removed) ui.showHint(removed.charged ? `Removido: -${removed.charged} pontos.` : 'Removido (sem custo: placar zerado).');
+  if (removed) ui.showHint(`Removido: -${removed.charged} pontos.`);
   if (state.selected && !game.entities.includes(state.selected)) state.selected = null;
 }
 

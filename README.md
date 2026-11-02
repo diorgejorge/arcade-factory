@@ -23,7 +23,7 @@ npm run build   # typecheck + build de produção
 - A ilha tem 4 zonas. Só a central está liberada no início; as pesquisas **Expansão I–III** liberam as de fora.
 - Itens entregues na Central viram pontos. **Toda pesquisa custa pontos do placar** e exige uma tecnologia anterior (a árvore mostra o pré-requisito de cada uma); elas desbloqueiam máquinas, receitas e expansões da ilha.
 - Clique numa montadora para escolher a receita.
-- **Remover custa pontos** (por tipo de construção; o placar nunca fica negativo). Só remove com clique direito, sem arrastar.
+- **Construir custa pontos** (preço na barra; versões Mk mais altas custam mais: +50% do preço base por versão). **Remover custa o dobro de construir** (só com clique direito, sem arrastar). O **placar pode ficar negativo**: ele é o resultado líquido (produção − construção − remoção − pesquisa). Pesquisar exige saldo: placar maior ou igual ao custo.
 
 ## Árvore de pesquisa
 

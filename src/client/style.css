@@ -22,7 +22,7 @@ button, select { font: inherit; color: var(--text); background: #232a36; border:
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.active { border-color: var(--accent); background: #3a3320; }
-.tool { display: flex; align-items: center; gap: 8px; width: 150px; text-align: left; }
+.tool { display: flex; align-items: center; gap: 8px; width: 178px; text-align: left; }
 .tool canvas { position: static; width: 24px; height: 24px; flex: none; cursor: inherit; }
 .tool kbd { margin-left: auto; color: var(--muted); }
 .row { display: flex; justify-content: space-between; gap: 8px; }
@@ -35,3 +35,5 @@ button.active { border-color: var(--accent); background: #3a3320; }
 @media (max-width: 720px) { #side { width: 190px; font-size: 11px; } .tool { width: 44px; } .tool span, .tool kbd { display: none; } }
 .versions { display: flex; flex-wrap: wrap; gap: 4px; max-width: 150px; }
 .versions button { padding: 2px 6px; }
+.tool .price { color: var(--muted); }
+#hud b.neg { color: #e57373; }

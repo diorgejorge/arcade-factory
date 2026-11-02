@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEM_VALUE, MAX_TIER, REMOVAL_COST, TECHS, tierBoost, tierCost } from './data';
+import { BUILD_COST, buildCost, ITEM_VALUE, MAX_TIER, removalCost, TECHS, tierBoost, tierCost } from './data';
 import { offerItem } from './machines';
 import { Game } from './sim';
 import { isBuildableTile, Tile, VOID_ZONE } from './world';
@@ -118,21 +118,44 @@ describe('construção', () => {
   });
 });
 
-describe('remoção', () => {
-  it('custa pontos por tipo de construção e o placar nunca fica negativo', () => {
+describe('custos de construção e remoção', () => {
+  it('construir gasta pontos e o placar pode ficar negativo; recusa não cobra', () => {
     const game = new Game(SEED);
     const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
-    game.place('conveyor', x + 2, y, 0);
-    game.place('miner', x, y, 0);
-    game.score = 500;
-    expect(game.remove(x + 2, y)).toEqual({ kind: 'conveyor', charged: REMOVAL_COST.conveyor });
-    expect(game.score).toBe(500 - REMOVAL_COST.conveyor);
-    expect(game.remove(x, y)).toEqual({ kind: 'miner', charged: REMOVAL_COST.miner });
-    expect(game.score).toBe(500 - REMOVAL_COST.conveyor - REMOVAL_COST.miner);
-    game.place('miner', x, y, 0);
-    game.score = 7;
-    expect(game.remove(x, y)).toEqual({ kind: 'miner', charged: 7 }); // cobra só o que há
     expect(game.score).toBe(0);
+    expect(game.place('miner', x, y, 0)).toBe('ok');
+    expect(game.score).toBe(-BUILD_COST.miner);
+    expect(game.place('conveyor', x + 2, y, 0)).toBe('ok');
+    expect(game.place('hub', x + 3, y, 0)).toBe('ok');
+    expect(game.score).toBe(-(BUILD_COST.miner + BUILD_COST.conveyor + BUILD_COST.hub));
+    const debt = game.score;
+    expect(game.place('conveyor', x, y, 0)).toBe('occupied');
+    expect(game.place('furnace', x, y + 4, 0)).toBe('locked');
+    expect(game.score).toBe(debt); // construções recusadas não custam nada
+  });
+
+  it('versões mais altas custam mais; logística e Central não variam', () => {
+    expect([1, 2, 3, 4].map((mk) => buildCost('miner', mk))).toEqual([60, 90, 120, 150]);
+    expect(buildCost('conveyor', 4)).toBe(buildCost('conveyor', 1));
+    expect(buildCost('hub', 3)).toBe(BUILD_COST.hub);
+    const game = new Game(SEED);
+    grantTier(game, 2);
+    const { x, y } = findSite(game, 2, 2, pureOre(game, Tile.Iron, 4));
+    game.score = 0;
+    game.place('miner', x, y, 0, 2);
+    expect(game.score).toBe(-buildCost('miner', 2));
+  });
+
+  it('remover custa o dobro de construir, por versão, e o placar pode ficar negativo', () => {
+    const game = new Game(SEED);
+    grantTier(game, 2);
+    const { x, y } = findSite(game, 4, 2, pureOre(game, Tile.Iron, 4));
+    game.place('conveyor', x + 2, y, 0);
+    game.place('miner', x, y, 0, 2);
+    game.score = 0;
+    expect(game.remove(x + 2, y)).toEqual({ kind: 'conveyor', charged: 2 * BUILD_COST.conveyor });
+    expect(game.remove(x, y)).toEqual({ kind: 'miner', charged: removalCost('miner', 2) });
+    expect(game.score).toBe(-(2 * BUILD_COST.conveyor + 2 * buildCost('miner', 2)));
     expect(game.remove(x, y)).toBeUndefined(); // nada a remover, nada a cobrar
   });
 });
@@ -160,9 +183,10 @@ describe('produção', () => {
     game.place('conveyor', x + 2, y, 0);
     game.place('conveyor', x + 3, y, 0);
     game.place('hub', x + 4, y, 0);
+    const afterBuilding = game.score;
     runTicks(game, 400);
     expect(game.inventory.iron_ore).toBeGreaterThan(5);
-    expect(game.score).toBe(game.inventory.iron_ore);
+    expect(game.score - afterBuilding).toBe(game.inventory.iron_ore);
   });
 
   it('fornalha transforma minério em placa e vale mais', () => {
@@ -172,10 +196,11 @@ describe('produção', () => {
     game.place('miner', x, y, 0);
     game.place('furnace', x + 2, y, 0);
     game.place('hub', x + 4, y, 0);
+    const afterBuilding = game.score;
     runTicks(game, 800);
     expect(game.inventory.iron_plate).toBeGreaterThan(3);
     expect(game.inventory.iron_ore).toBe(0);
-    expect(game.score).toBe(game.inventory.iron_plate * ITEM_VALUE.iron_plate);
+    expect(game.score - afterBuilding).toBe(game.inventory.iron_plate * ITEM_VALUE.iron_plate);
   });
 
   it('é determinístico', () => {
@@ -243,6 +268,17 @@ describe('pesquisa', () => {
     expect(game.research('smelting')).toBe(false); // já pesquisada
     game.score = 80;
     expect(game.research('assembly')).toBe(true);
+    expect(game.score).toBe(0);
+  });
+
+  it('dívida de construção bloqueia pesquisas até o placar cobrir o custo', () => {
+    const game = new Game(SEED);
+    game.score = -100;
+    expect(game.research('smelting')).toBe(false);
+    game.score = 29;
+    expect(game.research('smelting')).toBe(false);
+    game.score = 30;
+    expect(game.research('smelting')).toBe(true);
     expect(game.score).toBe(0);
   });
 
