@@ -36,7 +36,7 @@ const ui = createUi(game, state, {
   setSpeed: (speed) => (state.speed = speed),
 });
 
-if (import.meta.env.DEV) Object.assign(window, { __game: game, __world: world });
+if (import.meta.env.DEV) Object.assign(window, { __game: game, __world: world, __state: state });
 
 // ---------- construção ----------
 
