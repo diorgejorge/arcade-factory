@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { createRng } from '../../src/engine/rng';
+import { createModel, makeGear, type Model } from '../../src/client3d/models';
+import type { BuildingKind, Dir } from '../../src/engine/types';
 
 // ---------- configuração ----------
 const PIXEL_SIZE = Number(new URLSearchParams(location.search).get('ps') ?? 2); // 1 pixel renderizado = N pixels na tela
@@ -72,7 +74,10 @@ function paintOre(cx: number, cz: number, radius: number, base: string[], lump: 
       const j = Math.round(CZ + cz * K + dz);
       if (!topAt(i, j) || Math.hypot(dx, dz) > radius - rng() * 3) continue;
       setVoxel(i, 0, j, base[Math.floor(rng() * base.length)], 0.05);
-      const height = rng() < 0.55 ? 1 + Math.floor(rng() * 2.4) : 0;
+      const wx = (i - CX + 0.5) * S;
+      const wz = (j - CZ + 0.5) * S;
+      const onFactory = wx > -7.5 && wz > -0.5 && wz < 1.5; // mantém a linha de produção desobstruída
+      const height = !onFactory && rng() < 0.55 ? 1 + Math.floor(rng() * 2.4) : 0;
       for (let y = 1; y <= height; y++) setVoxel(i, y, j, lump[Math.floor(rng() * lump.length)], 0.09);
     }
   }
@@ -134,73 +139,40 @@ exposed.forEach((v, n) => {
 terrain.castShadow = terrain.receiveShadow = true;
 scene.add(terrain);
 
-// ---------- peças da fábrica (blocos menores, 1/4 de tile) ----------
-const mats = new Map<string, THREE.MeshLambertMaterial>();
-const mat = (hex: string, emissive?: string) => {
-  const k = hex + (emissive ?? '');
-  if (!mats.has(k)) mats.set(k, new THREE.MeshLambertMaterial({ color: hex, flatShading: true, ...(emissive ? { emissive, emissiveIntensity: 1 } : {}) }));
-  return mats.get(k)!;
-};
-const BRASS = '#e0a63c', BRASS_D = '#a8702a', COPPER = '#cf6d3c', STEEL = '#9aa5b3', STEEL_D = '#5e6877', DARK = '#2a2024', LEATHER = '#4e372b';
-
-function box(parent: THREE.Object3D, w: number, h: number, d: number, x: number, y: number, z: number, hex: string, emissive?: string) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(hex, emissive));
-  mesh.position.set(x, y + h / 2, z);
-  mesh.castShadow = mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
-function cyl(parent: THREE.Object3D, r: number, h: number, x: number, y: number, z: number, hex: string, seg = 10) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat(hex));
-  mesh.position.set(x, y + h / 2, z);
-  mesh.castShadow = mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
-function gear(r: number, teeth: number, hex: string, thick = 0.09) {
-  const g = new THREE.Group();
-  cyl(g, r, thick, 0, 0, 0, hex, 14);
-  for (let k = 0; k < teeth; k++) {
-    const a = (k / teeth) * TAU;
-    const tooth = box(g, r * 0.42, thick, r * 0.3, Math.cos(a) * (r + r * 0.12), 0, Math.sin(a) * (r + r * 0.12), hex);
-    tooth.rotation.y = -a;
-  }
-  cyl(g, r * 0.25, thick + 0.04, 0, 0, 0, BRASS);
-  return g;
-}
-
+// ---------- fábrica (modelos reutilizáveis do jogo) ----------
 const anims: ((t: number) => void)[] = [];
-const place = (tx: number, tz: number) => {
-  const g = new THREE.Group();
-  g.position.set(tx + 0.5, 0, tz + 0.5);
-  scene.add(g);
-  return g;
-};
+const models: Model[] = [];
+function spawn(kind: BuildingKind, tx: number, tz: number, dir: Dir = 0): Model {
+  const model = createModel(kind, dir);
+  model.group.position.set(tx + 0.5, 0, tz + 0.5);
+  scene.add(model.group);
+  if (model.light) model.group.add(model.light);
+  model.effects?.forEach((effect) => scene.add(effect));
+  models.push(model);
+  return model;
+}
 const ROW = 0;
 const phase = (t: number, cycles = 1) => ((t / LOOP) * cycles) % 1;
 
-// esteiras: tiles -6,-5 / -3,-2 / 0,1
-const BELT_TILES = [-6, -5, -3, -2, 0, 1];
-for (const tx of BELT_TILES) {
-  const g = place(tx, ROW);
-  box(g, 1, 0.14, 0.12, 0, 0, -0.42, STEEL); box(g, 1, 0.14, 0.12, 0, 0, 0.42, STEEL);
-  box(g, 1, 0.08, 0.72, 0, 0, 0, LEATHER);
-  for (let k = 0; k < 6; k++) box(g, 0.06, 0.02, 0.06, -0.4 + (k % 2) * 0.8, 0.14, k < 3 ? -0.42 : 0.42, BRASS);
-  const chevrons: THREE.Group[] = [];
-  for (let k = 0; k < 4; k++) {
-    const c = new THREE.Group();
-    for (const s of [-1, 1]) { const arm = box(c, 0.26, 0.02, 0.06, -0.06, 0.08, s * 0.1, '#7a5842'); arm.rotation.y = s * 0.7; }
-    g.add(c); chevrons.push(c);
-  }
-  anims.push((t) => chevrons.forEach((c, k) => { c.position.x = ((k / 4 + phase(t, 8) * 1) % 1) - 0.5; }));
-}
+spawn('miner', -7, ROW);
+spawn('furnace', -4, ROW);
+spawn('assembler', -1, ROW);
+spawn('hub', 2, ROW);
+for (const tx of [-6, -5, -3, -2, 0, 1]) spawn('conveyor', tx, ROW);
 
 // itens deslizando nos segmentos de 2 tiles
+const itemMat = (hex: string) => new THREE.MeshLambertMaterial({ color: hex, flatShading: true });
+function lump(parent: THREE.Object3D, w: number, h: number, d: number, x: number, y: number, z: number, hex: string) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), itemMat(hex));
+  mesh.position.set(x, y + h / 2, z);
+  mesh.castShadow = true;
+  parent.add(mesh);
+}
 function makeItem(kind: 'ore' | 'plate' | 'gear') {
   const g = new THREE.Group();
-  if (kind === 'ore') { box(g, 0.2, 0.14, 0.18, 0, 0, 0, '#8f9cac'); box(g, 0.12, 0.1, 0.12, 0.08, 0.12, 0.02, '#c6d1dd'); }
-  if (kind === 'plate') { box(g, 0.28, 0.05, 0.18, 0, 0, 0, '#c9d3df'); box(g, 0.28, 0.05, 0.18, 0.03, 0.05, 0.02, '#aab6c4'); }
-  if (kind === 'gear') g.add(gear(0.11, 8, '#b5bfcb', 0.06));
+  if (kind === 'ore') { lump(g, 0.2, 0.14, 0.18, 0, 0, 0, '#8f9cac'); lump(g, 0.12, 0.1, 0.12, 0.08, 0.12, 0.02, '#c6d1dd'); }
+  if (kind === 'plate') { lump(g, 0.28, 0.05, 0.18, 0, 0, 0, '#c9d3df'); lump(g, 0.28, 0.05, 0.18, 0.03, 0.05, 0.02, '#aab6c4'); }
+  if (kind === 'gear') g.add(makeGear(0.11, 8, '#b5bfcb', 0.06));
   return g;
 }
 for (const [start, kind] of [[-6, 'ore'], [-3, 'plate'], [0, 'gear']] as const) {
@@ -213,91 +185,16 @@ for (const [start, kind] of [[-6, 'ore'], [-3, 'plate'], [0, 'gear']] as const) 
   }));
 }
 
-// mineradora (tile -7)
+// decoração: caixotes, barril e poste de luz
 {
-  const g = place(-7, ROW);
-  box(g, 0.92, 0.12, 0.92, 0, 0, 0, STEEL_D);
-  for (const [x, z] of [[-0.36, -0.36], [0.36, -0.36], [-0.36, 0.36], [0.36, 0.36]]) box(g, 0.08, 0.95, 0.08, x, 0.1, z, STEEL);
-  for (const y of [0.35, 0.65]) { box(g, 0.8, 0.05, 0.05, 0, y, -0.36, STEEL); box(g, 0.8, 0.05, 0.05, 0, y, 0.36, STEEL); box(g, 0.05, 0.05, 0.8, -0.36, y, 0, STEEL); box(g, 0.05, 0.05, 0.8, 0.36, y, 0, STEEL); }
-  box(g, 0.84, 0.06, 0.84, 0, 1.0, 0, BRASS_D);
-  const rod = new THREE.Group(); rod.position.y = 0.1; g.add(rod);
-  cyl(rod, 0.07, 0.95, 0, 0, 0, COPPER, 8);
-  for (let k = 0; k < 6; k++) { const b = box(rod, 0.2, 0.05, 0.06, 0, 0.1 + k * 0.14, 0, STEEL); b.rotation.y = k * 0.9; }
-  const top = gear(0.2, 10, STEEL); top.position.set(0, 1.08, 0); g.add(top);
-  box(g, 0.26, 0.3, 0.26, 0.3, 0.12, 0.3, COPPER);
-  const piston = box(g, 0.08, 0.28, 0.08, 0.3, 0.42, 0.3, STEEL);
-  anims.push((t) => { rod.rotation.y = -phase(t, 3) * TAU; top.rotation.y = phase(t, 2) * (TAU / 10) * 5; piston.position.y = 0.42 + 0.14 + Math.sin(phase(t, 4) * TAU) * 0.08; });
-}
-
-// fornalha (tile -4) + fumaça + luz do fogo
-{
-  const g = place(-4, ROW);
-  box(g, 0.94, 0.16, 0.94, 0, 0, 0, STEEL_D);
-  cyl(g, 0.4, 0.62, 0, 0.16, 0, COPPER, 12);
-  for (const y of [0.3, 0.62]) cyl(g, 0.42, 0.06, 0, y, 0, BRASS, 12);
-  cyl(g, 0.11, 0.5, 0.22, 0.72, -0.22, STEEL, 8); cyl(g, 0.14, 0.06, 0.22, 1.18, -0.22, BRASS, 8);
-  const door = box(g, 0.06, 0.22, 0.3, 0.42, 0.22, 0, '#ff8a1f', '#ff7a10');
-  box(g, 0.04, 0.26, 0.34, 0.41, 0.2, 0, BRASS_D);
-  const gauge = cyl(g, 0.09, 0.05, -0.2, 0.8, 0.2, BRASS, 10); gauge.rotation.x = Math.PI / 2 - 0.5;
-  const light = new THREE.PointLight(0xff8a2a, 6, 5); light.position.set(-4 + 0.5 + 0.7, 0.5, 0.5); scene.add(light);
-  const puffs = Array.from({ length: 8 }, () => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshLambertMaterial({ color: '#eef3f6', transparent: true }));
-    scene.add(m); return m;
-  });
-  anims.push((t) => {
-    const flick = 0.8 + 0.2 * Math.sin(phase(t, 6) * TAU) + 0.08 * Math.sin(phase(t, 13) * TAU);
-    light.intensity = 6 * flick;
-    (door.material as THREE.MeshLambertMaterial).emissiveIntensity = 0.6 + 0.4 * flick;
-    puffs.forEach((p, k) => {
-      const u = (phase(t, 2) + k / 8) % 1;
-      p.position.set(-4 + 0.5 + 0.22 + u * 1.2 + Math.sin(u * 7 + k) * 0.1, 1.25 + u * 2.6, 0.5 - 0.22 + Math.sin(u * 5 + k * 2) * 0.1);
-      p.scale.setScalar(0.5 + u * 1.7); p.rotation.y = u * 2;
-      (p.material as THREE.MeshLambertMaterial).opacity = 0.85 * (1 - u) ** 1.3;
-    });
-  });
-}
-
-// montadora (tile -1)
-{
-  const g = place(-1, ROW);
-  box(g, 0.94, 0.4, 0.94, 0, 0, 0, BRASS);
-  box(g, 0.78, 0.05, 0.78, 0, 0.4, 0, DARK);
-  const g1 = gear(0.26, 10, STEEL); g1.position.set(-0.14, 0.45, -0.1); g.add(g1);
-  const g2 = gear(0.16, 6, COPPER); g2.position.set(0.22, 0.45, 0.1); g.add(g2);
-  box(g, 0.1, 0.4, 0.1, -0.34, 0.4, 0.34, BRASS_D);
-  const arm1 = new THREE.Group(); arm1.position.set(-0.34, 0.72, 0.34); g.add(arm1);
-  box(arm1, 0.42, 0.07, 0.07, 0.21, 0, 0, STEEL);
-  const arm2 = new THREE.Group(); arm2.position.set(0.42, 0.035, 0); arm1.add(arm2);
-  box(arm2, 0.36, 0.06, 0.06, 0.18, 0, 0, STEEL); box(arm2, 0.08, 0.1, 0.12, 0.38, -0.03, 0, COPPER);
-  const lamp = box(g, 0.12, 0.12, 0.12, 0.36, 0.4, -0.36, '#ffd24a', '#ffb020');
-  anims.push((t) => {
-    const p = phase(t, 2) * (TAU / 10);
-    g1.rotation.y = p * 5; g2.rotation.y = -p * 5 * 10 / 6 + TAU / 12;
-    arm1.rotation.y = -0.9 + 0.5 * Math.sin(phase(t, 1) * TAU); arm2.rotation.y = 0.9 * Math.cos(phase(t, 1) * TAU);
-    (lamp.material as THREE.MeshLambertMaterial) .emissiveIntensity = 0;
-    lamp.visible = true; lamp.scale.setScalar(phase(t, 2) < 0.5 ? 1.15 : 0.8);
-  });
-}
-
-// central / cofre (tile 2)
-{
-  const g = place(2, ROW);
-  box(g, 0.96, 0.62, 0.96, 0, 0, 0, STEEL_D);
-  box(g, 1, 0.07, 1, 0, 0.62, 0, BRASS);
-  const wheel = new THREE.Group(); wheel.position.set(0, 0.7, 0); g.add(wheel);
-  cyl(wheel, 0.3, 0.06, 0, 0, 0, BRASS, 14); cyl(wheel, 0.24, 0.08, 0, 0, 0, STEEL, 14);
-  for (let k = 0; k < 4; k++) { const sp = box(wheel, 0.5, 0.05, 0.06, 0, 0.06, 0, BRASS); sp.rotation.y = (k * Math.PI) / 4; }
-  cyl(wheel, 0.07, 0.1, 0, 0.04, 0, BRASS, 8);
-  box(g, 0.34, 0.05, 0.34, 0, 0.62, -0.34, DARK);
-  anims.push((t) => { wheel.rotation.y = phase(t, 1) * (TAU / 4); });
-}
-
-// decoração: caixotes, barris e poste de luz
-{
-  const crate = (tx: number, tz: number, h: number) => { const g = place(tx, tz); box(g, 0.7, 0.5 * h, 0.7, 0, 0, 0, '#9a6a3a'); box(g, 0.74, 0.06, 0.74, 0, 0.5 * h - 0.06, 0, '#7a4f2e'); };
+  const deco = (tx: number, tz: number) => { const g = new THREE.Group(); g.position.set(tx + 0.5, 0, tz + 0.5); scene.add(g); return g; };
+  const crate = (tx: number, tz: number, h: number) => { const g = deco(tx, tz); lump(g, 0.7, 0.5 * h, 0.7, 0, 0, 0, '#9a6a3a'); lump(g, 0.74, 0.06, 0.74, 0, 0.5 * h - 0.06, 0, '#7a4f2e'); };
   crate(3, 2, 1); crate(4, 2, 2); crate(3, 3, 1);
-  const barrel = place(5, 1); cyl(barrel, 0.28, 0.6, 0, 0, 0, '#8a5a34', 10); cyl(barrel, 0.3, 0.05, 0, 0.18, 0, BRASS, 10); cyl(barrel, 0.3, 0.05, 0, 0.4, 0, BRASS, 10);
-  const lamp = place(-8, -2); cyl(lamp, 0.05, 1.4, 0, 0, 0, STEEL_D, 6); box(lamp, 0.22, 0.22, 0.22, 0, 1.4, 0, '#ffe08a', '#ffc040');
+  const barrel = deco(5, 1);
+  const cask = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.6, 10), itemMat('#8a5a34')); cask.position.y = 0.3; cask.castShadow = true; barrel.add(cask);
+  const post = deco(-8, -2);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.4, 6), itemMat('#5e6877')); pole.position.y = 0.7; pole.castShadow = true; post.add(pole);
+  const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshLambertMaterial({ color: '#ffe08a', emissive: '#ffc040', emissiveIntensity: 1 })); bulb.position.y = 1.5; post.add(bulb);
   const lampLight = new THREE.PointLight(0xffc050, 2.5, 4); lampLight.position.set(-7.5, 1.6, -1.5); scene.add(lampLight);
 }
 
@@ -305,7 +202,7 @@ for (const [start, kind] of [[-6, 'ore'], [-3, 'plate'], [0, 'gear']] as const) 
 const clouds: THREE.Group[] = [];
 for (let n = 0; n < 3; n++) {
   const c = new THREE.Group();
-  for (let k = 0; k < 7; k++) box(c, rand(1.4, 2.6), 0.5, rand(1, 1.8), rand(-1.6, 1.6), rand(0, 0.3), rand(-0.8, 0.8), '#ffffff');
+  for (let k = 0; k < 7; k++) lump(c, rand(1.4, 2.6), 0.5, rand(1, 1.8), rand(-1.6, 1.6), rand(0, 0.3), rand(-0.8, 0.8), '#ffffff');
   c.position.set(n === 0 ? -17 : n === 1 ? 15 : -4, rand(8, 10), n === 2 ? -16 : rand(-2, 6));
   c.traverse((o) => { (o as THREE.Mesh).castShadow = false; });
   scene.add(c); clouds.push(c);
@@ -325,10 +222,14 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+let lastT = 0;
 function frame(t: number) {
+  const dt = Math.max(0, t - lastT);
+  lastT = t;
   const a = 1.3 + 0.13 * Math.sin((t / LOOP) * TAU); // leve balanço da câmera
   camera.position.set(-2.5 + Math.cos(a) * 24, 17, 0.5 + Math.sin(a) * 24);
   camera.lookAt(-2.5, 0, 0.5);
+  models.forEach((model) => model.update(dt, true));
   anims.forEach((fn) => fn(t));
   renderer.render(scene, camera);
 }
