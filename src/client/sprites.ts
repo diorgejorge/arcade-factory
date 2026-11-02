@@ -1,5 +1,5 @@
 import type { BuildingKind } from '../engine/types';
-import { Tile } from '../engine/world';
+import { Tile, VOID_ZONE } from '../engine/world';
 
 export const TILE = 16;
 const PX = TILE / 8; // sprites 8x8 desenhados em tiles de 16px
@@ -16,6 +16,8 @@ const SPRITE_ROWS: Record<Exclude<BuildingKind, 'conveyor'>, string[]> = {
   furnace: ['kkkkkkkk', 'kssssssk', 'ksbbbbsk', 'ksbffbsk', 'ksbffbsk', 'ksbbbbsk', 'kssssssk', 'kkkkkkkk'],
   assembler: ['kkkkkkkk', 'kppppppk', 'kpwwwwpk', 'kpwggwpk', 'kpwggwpk', 'kpwwwwpk', 'kppppppk', 'kkkkkkkk'],
   hub: ['kkkkkkkk', 'kGGGGGGk', 'kGhhhhGk', 'kGhyyhGk', 'kGhyyhGk', 'kGhhhhGk', 'kGGGGGGk', 'kkkkkkkk'],
+  junction: ['..kssk..', '..ksbk..', 'kksbbskk', 'ksbbbbsk', 'ksbbbbsk', 'kksbbskk', '..ksbk..', '..kssk..'],
+  router: ['..kllk..', '..kolk..', 'kkloolkk', 'kloyyolk', 'kloyyolk', 'kkloolkk', '..kolk..', '..kllk..'],
 };
 
 export const ITEM_COLOR = {
@@ -68,6 +70,11 @@ export function renderTerrain(tiles: Uint8Array, width: number, height: number):
       const tile = tiles[y * width + x];
       const px = x * TILE;
       const py = y * TILE;
+      if (tile === Tile.Void) {
+        ctx.fillStyle = '#0c0e12';
+        ctx.fillRect(px, py, TILE, TILE);
+        continue;
+      }
       ctx.fillStyle = GROUND_COLORS[Math.floor(hash(x, y, 1) * GROUND_COLORS.length)];
       ctx.fillRect(px, py, TILE, TILE);
       if (tile === Tile.Rock) {
@@ -77,6 +84,13 @@ export function renderTerrain(tiles: Uint8Array, width: number, height: number):
         ctx.fillRect(px + 2, py + 3, 8, 4);
         ctx.fillStyle = '#383c45';
         ctx.fillRect(px + 1, py + 12, 14, 3);
+      } else if (tile === Tile.Tree) {
+        ctx.fillStyle = '#1f3a22';
+        ctx.fillRect(px + 2, py + 2, 12, 12);
+        ctx.fillStyle = '#2f5a35';
+        ctx.fillRect(px + 3, py + 3, 8, 7);
+        ctx.fillStyle = '#4a3320';
+        ctx.fillRect(px + 7, py + 12, 2, 3);
       } else if (tile !== Tile.Ground) {
         const colors = ORE_COLORS[tile];
         for (let i = 0; i < 6; i++) {
@@ -84,6 +98,22 @@ export function renderTerrain(tiles: Uint8Array, width: number, height: number):
           ctx.fillRect(px + 1 + Math.floor(hash(x, y, i + 20) * 12), py + 1 + Math.floor(hash(x, y, i + 30) * 12), 3, 3);
         }
       }
+    }
+  }
+  return canvas;
+}
+
+/** Escurece as zonas da ilha que ainda não foram liberadas por pesquisa. */
+export function renderLockedOverlay(zones: Uint8Array, width: number, height: number, unlockedZone: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = width * TILE;
+  canvas.height = height * TILE;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#05070acc';
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const zone = zones[y * width + x];
+      if (zone > unlockedZone && zone !== VOID_ZONE) ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
     }
   }
   return canvas;

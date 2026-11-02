@@ -28,9 +28,25 @@ export const BUILDING_LABEL: Record<BuildingKind, string> = {
   furnace: 'Fornalha',
   assembler: 'Montadora',
   hub: 'Central',
+  junction: 'Junção',
+  router: 'Roteador',
 };
 
-export const BUILDING_ORDER: readonly BuildingKind[] = ['miner', 'conveyor', 'furnace', 'assembler', 'hub'];
+/** Lado da área quadrada que cada construção ocupa. Máquinas grandes custam espaço, mas produzem mais. */
+export const BUILDING_SIZE: Record<BuildingKind, number> = {
+  miner: 2,
+  conveyor: 1,
+  furnace: 2,
+  assembler: 3,
+  hub: 2,
+  junction: 1,
+  router: 1,
+};
+
+/** Multiplicador de velocidade de produção das máquinas. */
+export const CRAFT_SPEED: Partial<Record<BuildingKind, number>> = { furnace: 3, assembler: 4 };
+
+export const BUILDING_ORDER: readonly BuildingKind[] = ['miner', 'conveyor', 'junction', 'router', 'furnace', 'assembler', 'hub'];
 export const STARTING_BUILDINGS: readonly BuildingKind[] = ['miner', 'conveyor', 'hub'];
 
 export const RECIPES: Record<string, Recipe> = {
@@ -60,9 +76,13 @@ export const FURNACE_RECIPE_BY_INPUT: Partial<Record<ItemId, Recipe>> = Object.f
 
 export const TECHS: readonly Tech[] = [
   { id: 'smelting', name: 'Fundição', cost: { iron_ore: 30 }, buildings: ['furnace'], recipes: ['smelt_iron', 'smelt_copper'] },
+  { id: 'logistics', name: 'Logística', cost: { iron_plate: 25 }, requires: 'smelting', buildings: ['junction', 'router'] },
   { id: 'assembly', name: 'Montagem', cost: { iron_plate: 40 }, requires: 'smelting', buildings: ['assembler'], recipes: ['gear'] },
+  { id: 'land_1', name: 'Expansão I', cost: { iron_plate: 80 }, requires: 'assembly', effect: 'expand_land' },
   { id: 'electronics', name: 'Eletrônica', cost: { gear: 20, copper_plate: 30 }, requires: 'assembly', recipes: ['wire', 'circuit'] },
+  { id: 'land_2', name: 'Expansão II', cost: { gear: 40, copper_plate: 60 }, requires: 'land_1', effect: 'expand_land' },
   { id: 'robotics', name: 'Robótica', cost: { circuit: 20, gear: 20 }, requires: 'electronics', recipes: ['motor'] },
+  { id: 'land_3', name: 'Expansão III', cost: { circuit: 40, gear: 40 }, requires: 'land_2', effect: 'expand_land' },
   { id: 'overclock', name: 'Overclock', cost: { motor: 5 }, requires: 'robotics', effect: 'miner_boost' },
 ];
 

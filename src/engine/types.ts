@@ -8,7 +8,7 @@ export type ItemId =
   | 'circuit'
   | 'motor';
 
-export type BuildingKind = 'miner' | 'conveyor' | 'furnace' | 'assembler' | 'hub';
+export type BuildingKind = 'miner' | 'conveyor' | 'furnace' | 'assembler' | 'hub' | 'junction' | 'router';
 export type CrafterKind = 'furnace' | 'assembler';
 
 /** 0 = leste, 1 = sul, 2 = oeste, 3 = norte */
@@ -37,12 +37,14 @@ export interface Tech {
   requires?: string;
   buildings?: BuildingKind[];
   recipes?: string[];
-  effect?: 'miner_boost';
+  effect?: 'miner_boost' | 'expand_land';
 }
 
 export interface BeltItem {
   kind: ItemId;
-  /** Posição dentro do tile de origem (0 = entrada, 1 = saída). */
+  /** Direção em que o item viaja (usada por junções e roteadores). */
+  dir: Dir;
+  /** Progresso dentro do tile atual (0 = entrada, 1 = saída). */
   pos: number;
   /** Posição no mundo (em tiles) neste tick e no anterior, usada para interpolar o desenho. */
   wx: number;
@@ -54,18 +56,25 @@ export interface BeltItem {
 export interface Entity {
   id: number;
   kind: BuildingKind;
+  /** Canto superior esquerdo da área ocupada. */
   x: number;
   y: number;
+  /** Lado da área quadrada ocupada, em tiles. */
+  size: number;
   dir: Dir;
-  /** Itens na esteira, do mais à frente para o mais atrás. */
+  /** Itens em trânsito (esteira, junção ou roteador), do mais à frente para o mais atrás. */
   belt: BeltItem[];
   /** Receita atual (montadora escolhida pelo jogador; fornalha definida pelo minério recebido). */
   recipeId?: string;
-  /** Minério extraído (apenas mineradoras). */
+  /** Minério extraído (apenas mineradoras) e quantos tiles dele estão sob a máquina. */
   ore?: ItemId;
+  oreCount: number;
+  /** Estoque: ingredientes (máquinas) ou itens entregues (central). */
   inputs: ItemCounts;
   outItem?: ItemId;
   outCount: number;
   crafting: boolean;
   progress: number;
+  /** Próxima célula de saída a tentar (revezamento entre as bordas da máquina). */
+  outCursor: number;
 }

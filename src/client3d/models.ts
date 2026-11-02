@@ -265,7 +265,31 @@ function conveyor(): Model {
   };
 }
 
-const BUILDERS: Record<BuildingKind, () => Model> = { miner, furnace, assembler, hub, conveyor };
+/** Junção: cruzamento de trilhos de aço com tampa de latão. */
+function junction(): Model {
+  const g = new THREE.Group();
+  box(g, 1, 0.14, 0.3, 0, 0, 0, C.steel);
+  box(g, 0.3, 0.14, 1, 0, 0, 0, C.steel);
+  box(g, 0.52, 0.06, 0.52, 0, 0.14, 0, C.steelDark);
+  cyl(g, 0.17, 0.1, 0, 0.2, 0, C.brass, 12);
+  rivets(g, [[-0.4, 0.14, -0.1], [0.4, 0.14, 0.1], [-0.1, 0.14, 0.4], [0.1, 0.14, -0.4]], 0.045);
+  const root = new THREE.Group(); root.add(g);
+  return { group: root, update() {} };
+}
+
+/** Roteador: caixa de latão com engrenagem girando que reparte os itens. */
+function router(): Model {
+  const g = new THREE.Group();
+  box(g, 0.9, 0.2, 0.9, 0, 0, 0, C.brassDark);
+  box(g, 0.76, 0.06, 0.76, 0, 0.2, 0, C.dark);
+  const cog = makeGear(0.28, 8, C.brassLight, 0.08); cog.position.set(0, 0.26, 0); g.add(cog);
+  for (const [x, z, w, d] of [[0.44, 0, 0.14, 0.26], [0, 0.44, 0.26, 0.14], [0, -0.44, 0.26, 0.14]] as const) box(g, w, 0.1, d, x, 0.2, z, C.steel);
+  let t = 0;
+  const root = new THREE.Group(); root.add(g);
+  return { group: root, update(dt, active) { t += dt * (active ? 1 : 0.2); cog.rotation.y = t * spin(8, 4); } };
+}
+
+const BUILDERS: Record<BuildingKind, () => Model> = { miner, furnace, assembler, hub, conveyor, junction, router };
 
 /** Cria o modelo de um prédio já voltado para a direção `dir` (0 = leste, 1 = sul, 2 = oeste, 3 = norte). */
 export function createModel(kind: BuildingKind, dir: Dir): Model {

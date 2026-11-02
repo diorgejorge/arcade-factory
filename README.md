@@ -14,9 +14,12 @@ npm run build   # typecheck + build de produção
 
 ## Como jogar
 
-- **1–5**: escolhe a construção (Mineradora, Esteira, Fornalha, Montadora, Central). **R** gira. **Q/Esc** cancela.
+- **1–7**: escolhe a construção (Mineradora, Esteira, Junção, Roteador, Fornalha, Montadora, Central). **R** gira. **Q/Esc** cancela.
 - **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho); **direito** remove; **WASD/setas** movem; **roda** dá zoom; **espaço** pausa.
-- Mineradoras só funcionam sobre minério. Máquinas despejam o que produzem na direção em que estão viradas.
+- Mineradoras só funcionam sobre minério e rendem **por tile de minério** sob elas (2x2: de 1 a 4). Máquinas despejam o que produzem em qualquer célula da borda para onde estão viradas.
+- Tamanhos: mineradora 2x2, fornalha 2x2, montadora 3x3, central 2x2; esteira, junção e roteador 1x1. Espaço é o recurso escasso.
+- **Junção** cruza duas esteiras (cada item segue em linha reta). **Roteador** reparte itens em revezamento entre as saídas.
+- A ilha tem 4 zonas. Só a central está liberada no início; as pesquisas **Expansão I–III** liberam as de fora.
 - Itens entregues na Central viram pontos **e** estoque; o estoque paga as pesquisas (painel lateral), que desbloqueiam novas máquinas e receitas.
 - Clique numa montadora para escolher a receita.
 
@@ -26,8 +29,9 @@ npm run build   # typecheck + build de produção
 
 ## Arquitetura
 
-- `src/engine/` — simulação pura e determinística (sem DOM), 20 ticks/s. Mesma seed + mesmos comandos = mesmo resultado, para o servidor poder validar o ranking rodando o mesmo código.
-- `src/client/` — canvas, sprites desenhados por código e interface.
+- `src/engine/` — simulação pura e determinística (sem DOM), 20 ticks/s; ilha 40x30 gerada por seed, com zonas expansíveis. Mesma seed + mesmos comandos = mesmo resultado, para o servidor poder validar o ranking rodando o mesmo código.
+- `src/client/` — cliente 2D atual (canvas), a ser substituído pelo 3D voxel.
+- `src/client3d/` — modelos 3D das máquinas (Three.js), reutilizáveis pelo jogo. `prototypes/voxel/` é a cena de demonstração.
 
 ## Próximos passos
 

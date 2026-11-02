@@ -1,3 +1,4 @@
+import { BUILDING_SIZE } from '../engine/data';
 import { BELT_SPEED } from '../engine/machines';
 import type { Game } from '../engine/sim';
 import type { BuildingKind, Dir, Entity } from '../engine/types';
@@ -35,19 +36,20 @@ function drawConveyor(ctx: CanvasRenderingContext2D, entity: Entity, anim: numbe
 function drawMachine(ctx: CanvasRenderingContext2D, entity: Entity, tick: number): void {
   const px = entity.x * TILE;
   const py = entity.y * TILE;
+  const span = entity.size * TILE;
   const shake = entity.kind === 'miner' && entity.outCount === 0 ? (tick >> 2) % 2 : 0;
-  ctx.drawImage(buildingSprites[entity.kind as keyof typeof buildingSprites], px + shake, py);
+  ctx.drawImage(buildingSprites[entity.kind as keyof typeof buildingSprites], px + shake, py, span, span);
 
   if (entity.crafting) {
     ctx.fillStyle = entity.kind === 'furnace' ? ((tick >> 2) % 2 ? '#ffd24a' : '#ff7a1a') : (tick >> 3) % 2 ? '#7dffb0' : '#1f6b44';
-    ctx.fillRect(px + 6, py + 6, 4, 4);
+    ctx.fillRect(px + span / 2 - 2, py + span / 2 - 2, 4, 4);
   }
-  if (entity.kind !== 'hub') {
+  if (entity.kind !== 'hub' && entity.kind !== 'junction' && entity.kind !== 'router') {
     ctx.save();
-    ctx.translate(px + HALF, py + HALF);
+    ctx.translate(px + span / 2, py + span / 2);
     ctx.rotate((entity.dir * Math.PI) / 2);
     ctx.fillStyle = '#f5b942';
-    ctx.fillRect(HALF - 3, -2, 3, 4);
+    ctx.fillRect(span / 2 - 3, -2, 3, 4);
     ctx.restore();
   }
 }
@@ -60,11 +62,11 @@ function drawGhost(ctx: CanvasRenderingContext2D, overlay: Overlay): void {
   if (ghost.kind === 'conveyor') {
     drawConveyor(ctx, { x: hover.x, y: hover.y, dir: ghost.dir } as Entity, 0);
   } else {
-    ctx.drawImage(buildingSprites[ghost.kind], hover.x * TILE, hover.y * TILE);
+    ctx.drawImage(buildingSprites[ghost.kind], hover.x * TILE, hover.y * TILE, BUILDING_SIZE[ghost.kind] * TILE, BUILDING_SIZE[ghost.kind] * TILE);
   }
   if (!ghost.valid) {
     ctx.fillStyle = '#ff4d4d88';
-    ctx.fillRect(hover.x * TILE, hover.y * TILE, TILE, TILE);
+    ctx.fillRect(hover.x * TILE, hover.y * TILE, BUILDING_SIZE[ghost.kind] * TILE, BUILDING_SIZE[ghost.kind] * TILE);
   }
   ctx.restore();
 }
@@ -79,6 +81,7 @@ export function render(
   ctx: CanvasRenderingContext2D,
   game: Game,
   terrain: HTMLCanvasElement,
+  lockedOverlay: HTMLCanvasElement,
   view: View,
   overlay: Overlay,
   alpha: number,
@@ -92,6 +95,7 @@ export function render(
   ctx.setTransform(scale, 0, 0, scale, -view.camX * scale, -view.camY * scale);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(terrain, 0, 0);
+  ctx.drawImage(lockedOverlay, 0, 0);
 
   const anim = (game.tick + alpha) * BELT_SPEED * TILE;
   const minX = view.camX - TILE;
@@ -116,5 +120,9 @@ export function render(
 
   drawGhost(ctx, overlay);
   if (overlay.hover && !overlay.ghost) strokeTile(ctx, overlay.hover.x, overlay.hover.y, '#ffffff66');
-  if (overlay.selected) strokeTile(ctx, overlay.selected.x, overlay.selected.y, '#f5b942');
+  if (overlay.selected) {
+    ctx.strokeStyle = '#f5b942';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(overlay.selected.x * TILE + 0.5, overlay.selected.y * TILE + 0.5, overlay.selected.size * TILE - 1, overlay.selected.size * TILE - 1);
+  }
 }

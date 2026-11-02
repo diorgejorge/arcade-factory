@@ -1,9 +1,8 @@
 import { BUILDING_ORDER, RECIPES } from '../engine/data';
 import { Game, TICK_RATE, type PlaceResult } from '../engine/sim';
 import type { BuildingKind, Dir } from '../engine/types';
-import { MAP_SIZE } from '../engine/world';
 import { render, type Overlay, type View } from './render';
-import { renderTerrain, TILE } from './sprites';
+import { renderLockedOverlay, renderTerrain, TILE } from './sprites';
 import { createUi, type UiState } from './ui';
 
 const SEASON_SEED = 20261102; // no jogo real vem do servidor: uma seed por temporada
@@ -18,6 +17,7 @@ const PLACE_MESSAGES: Record<PlaceResult, string> = {
   blocked: 'Terreno bloqueado.',
   occupied: 'Já existe algo aqui.',
   locked: 'Ainda não desbloqueado: pesquise na lateral.',
+  out_of_zone: 'Zona ainda bloqueada: pesquise uma Expansão.',
   needs_ore: 'A mineradora precisa ficar sobre minério.',
 };
 
@@ -30,6 +30,8 @@ let toolDir: Dir = 0;
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const terrainImage = renderTerrain(game.terrain.tiles, game.terrain.width, game.terrain.height);
+let shownZone = game.unlockedZone;
+let lockedOverlay = renderLockedOverlay(game.terrain.zones, game.terrain.width, game.terrain.height, shownZone);
 const dpr = window.devicePixelRatio || 1;
 
 const ui = createUi(game, state, {
@@ -51,8 +53,8 @@ function resize(): void {
 }
 
 function centerCamera(): void {
-  view.camX = (MAP_SIZE * TILE) / 2 - window.innerWidth / 2 / view.zoom;
-  view.camY = (MAP_SIZE * TILE) / 2 - window.innerHeight / 2 / view.zoom;
+  view.camX = (game.terrain.width * TILE) / 2 - window.innerWidth / 2 / view.zoom;
+  view.camY = (game.terrain.height * TILE) / 2 - window.innerHeight / 2 / view.zoom;
 }
 
 function tileAt(clientX: number, clientY: number): { x: number; y: number } {
@@ -63,7 +65,7 @@ function tileAt(clientX: number, clientY: number): { x: number; y: number } {
 
 function updateGhost(): void {
   const hover = overlay.hover;
-  overlay.ghost = state.tool && hover ? { kind: state.tool, dir: toolDir, valid: !game.entityAt(hover.x, hover.y) } : undefined;
+  overlay.ghost = state.tool && hover ? { kind: state.tool, dir: toolDir, valid: game.canPlace(state.tool, hover.x, hover.y) === 'ok' } : undefined;
   overlay.selected = state.selected ?? undefined;
 }
 
@@ -207,7 +209,11 @@ function frame(now: number): void {
   }
   if (steps === MAX_STEPS_PER_FRAME) accumulator = 0;
 
-  render(ctx, game, terrainImage, view, overlay, state.speed === 0 ? 1 : accumulator / TICK_MS, dpr);
+  if (game.unlockedZone !== shownZone) {
+    shownZone = game.unlockedZone;
+    lockedOverlay = renderLockedOverlay(game.terrain.zones, game.terrain.width, game.terrain.height, shownZone);
+  }
+  render(ctx, game, terrainImage, lockedOverlay, view, overlay, state.speed === 0 ? 1 : accumulator / TICK_MS, dpr);
   requestAnimationFrame(frame);
 }
 
