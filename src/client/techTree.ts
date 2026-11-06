@@ -4,7 +4,7 @@ import { el, formatNumber } from './dom';
 import { layoutGraph } from './treeLayout';
 import type { UiState } from './ui';
 
-const SIZE = { nodeW: 176, nodeH: 112, gapX: 64, gapY: 18 };
+const SIZE = { nodeW: 176, nodeH: 122, gapX: 64, gapY: 16 };
 const PAD = 24;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 

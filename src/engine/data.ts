@@ -184,7 +184,7 @@ export const TECH_GRAPH: readonly TreeNode[] = [
       cost: tierCost(tier),
       requires: [...(tier > 2 ? [`mk${tier - 1}`] : []), ...tierRequires(tier)],
       tier,
-      info: `Mineradora, fornalha e montadora +${Math.round(TIER_BONUS * (tier - 1) * 100)}%`,
+      info: `Máquinas +${Math.round(TIER_BONUS * (tier - 1) * 100)}% (mineradora, fornalha, montadora)`,
     };
   }),
 ];
