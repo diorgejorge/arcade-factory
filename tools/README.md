@@ -28,6 +28,13 @@ números dos roteiros (saldos e preços esperados).
 
 Mede a renda (pts/s) das cadeias no motor real: `npx vite-node tools/measure-income.ts`. Os custos do jogo se baseiam nesses números.
 
+## Bot jogador (`tools/playtest-bot.ts`)
+
+Joga a temporada no motor real, sem navegador (uma semana de jogo em segundos a minutos): `npx vite-node tools/playtest-bot.ts [dias]`.
+Constrói "linhas" (mineradora, fornalha, montadora de engrenagem, Central) em 4 direções, mantém as linhas à frente das pesquisas e reforma
+as fracas quando sai um modelo melhor. Imprime quando cada pesquisa sai e a renda por hora. É um jogador simples (sem fio, circuito, motor
+nem cobre): serve para ver o ritmo, não o teto da pontuação.
+
 ## Arte (`tools/art`)
 
 Exploração de sprites steampunk em Python/PIL (`steampunk.py` 3/4, `steam2.py` vista de cima animada). Não são usados pelo jogo,
