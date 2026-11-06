@@ -2,6 +2,8 @@ import { BUILDING_ORDER, BUILDING_SIZE, RECIPES } from '../engine/data';
 import { Game, TICK_RATE, type PlaceResult } from '../engine/sim';
 import type { BuildingKind, Dir, Entity } from '../engine/types';
 import { createWorld3D } from '../client3d/world3d';
+import { createCatalog } from './catalog';
+import { createTechTree } from './techTree';
 import { createUi, type UiState } from './ui';
 
 const SEASON_SEED = 20261102; // no jogo real vem do servidor: uma seed por temporada
@@ -27,12 +29,38 @@ let hover: Cell | undefined;
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const world = createWorld3D(canvas, game);
+const tree = createTechTree(game, state);
+const catalog = createCatalog(game, state, {
+  pick: (kind, mk) => {
+    state.tool = kind;
+    state.mk = mk;
+    state.selected = null;
+    catalog.close();
+    updateGhost();
+  },
+  openTree: () => {
+    catalog.close();
+    tree.open();
+  },
+});
+const toggleTree = () => {
+  catalog.close();
+  tree.toggle();
+};
+const toggleCatalog = () => {
+  tree.close();
+  catalog.toggle();
+};
+const modalOpen = () => tree.isOpen() || catalog.isOpen();
+
 const ui = createUi(game, state, {
   selectTool: (kind) => {
     state.tool = kind;
     state.selected = null;
     updateGhost();
   },
+  toggleTree,
+  toggleCatalog,
 });
 
 if (import.meta.env.DEV) Object.assign(window, { __game: game, __world: world, __state: state });
@@ -131,6 +159,15 @@ window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLSelectElement) return;
   const key = e.key.toLowerCase();
   heldKeys.add(key);
+  if (key === 't') return toggleTree();
+  if (key === 'b') return toggleCatalog();
+  if (modalOpen()) {
+    if (key === 'escape') {
+      tree.close();
+      catalog.close();
+    }
+    return;
+  }
   const kind = BUILDING_ORDER[Number(key) - 1];
   if (kind) {
     if (!game.isBuildingUnlocked(kind)) return ui.showHint('Ainda bloqueado: pesquise na lateral.');
@@ -176,8 +213,13 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
-ui.refresh();
-window.setInterval(ui.refresh, 250);
+const refreshAll = () => {
+  ui.refresh();
+  tree.refresh();
+  catalog.refresh();
+};
+refreshAll();
+window.setInterval(refreshAll, 250);
 // `?manual` (só em dev): o teste dirige o relógio, pois sem GPU o laço contínuo nunca deixa a página ociosa.
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('manual')) Object.assign(window, { __advance: advance });
 else requestAnimationFrame(frame);

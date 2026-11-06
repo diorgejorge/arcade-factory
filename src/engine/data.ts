@@ -128,13 +128,6 @@ export const tierRequires = (tier: number): readonly string[] =>
 const techById = new Map(TECHS.map((tech) => [tech.id, tech]));
 export const requirementLabel = (id: string): string => (id.startsWith('mk') ? `Máquinas Mk${id.slice(2)}` : techById.get(id)!.name);
 
-const depthOf = (id: string): number => {
-  const requires = techById.get(id)?.requires;
-  return requires ? 1 + Math.max(...requires.map(depthOf)) : 0;
-};
-/** Tecnologias em ordem de desbloqueio (profundidade na árvore), para exibir na lista. */
-export const TECHS_BY_DEPTH: readonly Tech[] = [...TECHS].sort((a, b) => depthOf(a.id) - depthOf(b.id));
-
 /** Cada nível de transformação multiplica o valor dos ingredientes por este fator. */
 const TIER_MULTIPLIER = 2;
 const RAW_VALUE = 1;
@@ -151,3 +144,53 @@ function valueOf(item: ItemId): number {
 
 /** Pontos por item entregue: quanto mais complexa a cadeia, mais vale. */
 export const ITEM_VALUE = Object.fromEntries(ITEM_IDS.map((item) => [item, valueOf(item)])) as Record<ItemId, number>;
+
+/** Nó da árvore de pesquisa: tecnologia ou versão de máquinas (Mk). Os requisitos são as ligações do grafo. */
+export interface TreeNode {
+  id: string;
+  name: string;
+  cost: number;
+  requires: readonly string[];
+  /** Presente nos nós de versão de máquinas. */
+  tier?: number;
+  info: string;
+}
+
+const techInfo = (tech: Tech): string =>
+  [
+    tech.buildings?.length ? `Libera: ${tech.buildings.map((b) => BUILDING_LABEL[b]).join(', ')}` : '',
+    tech.recipes?.length ? `Receitas: ${tech.recipes.map((r) => RECIPE_LABEL[r]).join(', ')}` : '',
+    tech.effect === 'expand_land' ? 'Libera a próxima zona da ilha' : '',
+    tech.effect === 'miner_boost' ? 'Mineradoras 50% mais rápidas' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+/** Tecnologias e versões Mk juntas: é o que a tela da árvore desenha (nós = pesquisas, setas = requisitos). */
+export const TECH_GRAPH: readonly TreeNode[] = [
+  ...TECHS.map((tech) => ({ id: tech.id, name: tech.name, cost: tech.cost, requires: tech.requires ?? [], info: techInfo(tech) })),
+  ...Array.from({ length: MAX_TIER - 1 }, (_, i): TreeNode => {
+    const tier = i + 2;
+    return {
+      id: `mk${tier}`,
+      name: `Máquinas Mk${tier}`,
+      cost: tierCost(tier),
+      requires: [...(tier > 2 ? [`mk${tier - 1}`] : []), ...tierRequires(tier)],
+      tier,
+      info: `Mineradora, fornalha e montadora +${Math.round(TIER_BONUS * (tier - 1) * 100)}%`,
+    };
+  }),
+];
+
+export const BUILDING_INFO: Record<BuildingKind, string> = {
+  miner: 'Extrai minério do chão. Rende por tile de minério sob ela (até 4).',
+  conveyor: 'Leva itens de um ponto a outro. Arraste para desenhar o caminho.',
+  junction: 'Cruza duas esteiras: cada item segue em linha reta.',
+  router: 'Reparte os itens em revezamento entre as saídas.',
+  furnace: 'Funde minério em placas.',
+  assembler: 'Fabrica itens a partir de ingredientes. Escolha a receita na máquina.',
+  hub: 'Recebe os itens e os converte em pontos.',
+};
+
+/** Tecnologia que libera a construção, ou undefined se ela já vem liberada. */
+export const unlockingTech = (kind: BuildingKind): Tech | undefined => TECHS.find((tech) => tech.buildings?.includes(kind));

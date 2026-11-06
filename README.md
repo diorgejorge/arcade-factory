@@ -14,6 +14,7 @@ npm run build   # typecheck + build de produção
 
 ## Como jogar
 
+- **Botões Construções (B) e Tecnologias (T)** no topo: o catálogo mostra cada tipo de máquina com tamanho, receitas liberadas e as opções por versão Mk (desempenho, preço de construir e de remover); a árvore desenha as tecnologias e as versões Mk como grafo, com setas dos requisitos (verde = requisito cumprido) e permite pesquisar clicando no nó. Esc fecha as telas.
 - **1–7**: escolhe a construção (Mineradora, Esteira, Junção, Roteador, Fornalha, Montadora, Central). **R** gira. **Q/Esc** cancela.
 - **Botão esquerdo** constrói (arrastar com a esteira desenha o caminho) ou seleciona a máquina; **direito** remove; **WASD/setas** ou **botão do meio** movem a câmera; **roda** dá zoom. Não há pausa nem aceleração: o relógio é o mesmo para todos na temporada.
 - Mineradoras só funcionam sobre minério e rendem **por tile de minério** sob elas (2x2: de 1 a 4). Máquinas despejam o que produzem em qualquer célula da borda para onde estão viradas.
