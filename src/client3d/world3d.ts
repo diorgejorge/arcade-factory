@@ -240,6 +240,12 @@ export function createWorld3D(canvas: HTMLCanvasElement, game: Game) {
       updateCamera();
     },
 
+    /** Centra a câmera no tile (x, y). */
+    focus(x: number, y: number): void {
+      target.set(x + 0.5 - W / 2, 0, y + 0.5 - H / 2);
+      updateCamera();
+    },
+
     zoom(wheelDelta: number): void {
       half = THREE.MathUtils.clamp(half * (wheelDelta < 0 ? 1 / 1.15 : 1.15), ZOOM_MIN, ZOOM_MAX);
       resize();
