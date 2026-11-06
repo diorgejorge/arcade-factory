@@ -43,6 +43,31 @@ Fundição de ferro ─┬─ Fundição de cobre ──────┐
  Versões das máquinas: Mk2 ← Montagem · Mk3 ← Eletrônica · Mk4 ← Robótica + Expansão II (+ Mk3) · Mk5+ ← Overclock
 ```
 
+## Economia (provisória, a acertar jogando)
+
+Renda medida no motor, por mineradora sobre 4 tiles de ferro: minério direto **1,33 pts/s** · com fornalha **2,67** · com montadora de engrenagem **5,33**.
+Os custos estão em `src/engine/data.ts` (`BUILD_COST`, `TECHS`, `tierCost`) e os testes de `balanceamento` travam os tempos de retorno.
+
+| Construir (Mk1) | pts | Retorno |
+|---|---|---|
+| Esteira / Junção / Roteador | 3 / 20 / 20 | — |
+| Mineradora | 360 | ~4,5 min |
+| Fornalha | 400 | ~5 min |
+| Montadora | 1.200 | ~7,5 min |
+| Central | 300 | porta de entrada |
+| Primeira cadeia (mineradora + 2 esteiras + Central) | 666 | ~8 min |
+
+Remover custa o dobro de construir. Cada versão Mk acima da Mk1 encarece a construção em 50% do preço base.
+
+| Pesquisa | pts | | Pesquisa | pts |
+|---|---|---|---|---|
+| Fundição de ferro | 800 | | Eletrônica | 60.000 |
+| Logística | 3.000 | | Expansão II | 90.000 |
+| Montagem | 4.000 | | Robótica | 200.000 |
+| Fundição de cobre | 5.000 | | Overclock | 300.000 |
+| Fiação | 15.000 | | Expansão III | 350.000 |
+| Expansão I | 20.000 | | Mk2 · Mk3 · Mk4 … | 30 mil · 78 mil · 202,8 mil … (2,6x cada) |
+
 ## Pontuação
 
 `valor = soma(ingredientes) / unidades produzidas × 2`. Minério = 1, placa = 2, engrenagem = 8, circuito = 16, motor = 64.

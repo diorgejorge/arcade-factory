@@ -5,6 +5,7 @@ import { Game } from './sim';
 import { isBuildableTile, Tile, VOID_ZONE } from './world';
 
 const SEED = 2026;
+const cost = (techId: string) => TECHS.find((tech) => tech.id === techId)!.cost;
 
 const tileAt = (game: Game, x: number, y: number) => game.terrain.tiles[y * game.terrain.width + x];
 
@@ -135,7 +136,7 @@ describe('custos de construção e remoção', () => {
   });
 
   it('versões mais altas custam mais; logística e Central não variam', () => {
-    expect([1, 2, 3, 4].map((mk) => buildCost('miner', mk))).toEqual([60, 90, 120, 150]);
+    expect([1, 2, 3, 4].map((mk) => buildCost('miner', mk))).toEqual([360, 540, 720, 900]);
     expect(buildCost('conveyor', 4)).toBe(buildCost('conveyor', 1));
     expect(buildCost('hub', 3)).toBe(BUILD_COST.hub);
     const game = new Game(SEED);
@@ -257,16 +258,16 @@ describe('logística', () => {
 describe('pesquisa', () => {
   it('gasta pontos do placar e exige a tecnologia anterior', () => {
     const game = new Game(SEED);
-    game.score = 1000;
+    game.score = 1e6;
     expect(game.research('assembly')).toBe(false); // falta Fundição
-    game.score = 29;
+    game.score = cost('smelting') - 1;
     expect(game.research('smelting')).toBe(false); // falta 1 ponto
-    game.score = 30;
+    game.score = cost('smelting');
     expect(game.research('smelting')).toBe(true);
     expect(game.score).toBe(0);
     expect(game.isBuildingUnlocked('furnace')).toBe(true);
     expect(game.research('smelting')).toBe(false); // já pesquisada
-    game.score = 80;
+    game.score = cost('assembly');
     expect(game.research('assembly')).toBe(true);
     expect(game.score).toBe(0);
   });
@@ -275,9 +276,9 @@ describe('pesquisa', () => {
     const game = new Game(SEED);
     game.score = -100;
     expect(game.research('smelting')).toBe(false);
-    game.score = 29;
+    game.score = cost('smelting') - 1;
     expect(game.research('smelting')).toBe(false);
-    game.score = 30;
+    game.score = cost('smelting');
     expect(game.research('smelting')).toBe(true);
     expect(game.score).toBe(0);
   });
@@ -301,20 +302,20 @@ describe('pesquisa', () => {
 
 describe('versões Mk', () => {
   it('cada versão custa mais pontos e soma 10% de desempenho', () => {
-    expect([tierCost(2), tierCost(3), tierCost(4)]).toEqual([2000, 5000, 12500]);
+    expect([tierCost(2), tierCost(3), tierCost(4)]).toEqual([30000, 78000, 202800]);
     expect([tierBoost(1), tierBoost(2), tierBoost(4)].map((v) => +v.toFixed(2))).toEqual([1, 1.1, 1.3]);
   });
 
   it('a pesquisa gasta pontos do placar, na ordem, e só com saldo', () => {
     const game = new Game(SEED);
     research(game, 'smelting', 'assembly');
-    game.score = 1999;
+    game.score = tierCost(2) - 1;
     expect(game.researchTier()).toBe(false);
-    game.score = 2500;
+    game.score = tierCost(2) + 500;
     expect(game.researchTier()).toBe(true);
     expect(game.machineTier).toBe(2);
     expect(game.score).toBe(500);
-    expect(game.nextTierCost()).toBe(5000);
+    expect(game.nextTierCost()).toBe(tierCost(3));
     expect(game.researchTier()).toBe(false);
   });
 
@@ -411,5 +412,65 @@ describe('árvore de requisitos', () => {
     expect(game.research('robotics')).toBe(false); // tem Eletrônica e Expansão I, falta Mk2
     expect(game.researchTier()).toBe(true);
     expect(game.research('robotics')).toBe(true);
+  });
+});
+
+describe('balanceamento', () => {
+  /** Renda (pts/s) medida no motor: mineradora sobre 4 tiles de ferro com a cadeia dada. */
+  function chainRate(stage: 'hub' | 'furnace' | 'assembler'): number {
+    const game = new Game(SEED);
+    research(game, 'smelting', 'assembly');
+    const { x, y: top } = findSite(game, 10, 3, (sx, sy) => pureOre(game, Tile.Iron, 4)(sx, sy + 1));
+    const y = top + 1;
+    game.place('miner', x, y, 0);
+    if (stage === 'hub') game.place('hub', x + 2, y, 0);
+    else {
+      game.place('furnace', x + 2, y, 0);
+      if (stage === 'furnace') game.place('hub', x + 4, y, 0);
+      else {
+        game.place('conveyor', x + 4, y, 0);
+        game.place('conveyor', x + 5, y, 0);
+        game.place('assembler', x + 6, top, 0);
+        game.setRecipe(x + 6, top, 'gear');
+        game.place('hub', x + 9, y, 0);
+      }
+    }
+    runTicks(game, 1200); // aquecimento
+    const before = game.score;
+    runTicks(game, 4800);
+    return (game.score - before) / 240;
+  }
+  const rates = { hub: chainRate('hub'), furnace: chainRate('furnace'), assembler: chainRate('assembler') };
+  const minutes = (points: number, perSecond: number) => points / perSecond / 60;
+
+  it('mede a renda esperada de cada etapa da cadeia', () => {
+    expect(rates.hub).toBeCloseTo(1.33, 1);
+    expect(rates.furnace).toBeCloseTo(2.67, 1);
+    expect(rates.assembler).toBeCloseTo(5.33, 1);
+  });
+
+  it('a primeira cadeia (mineradora, 2 esteiras, Central) se paga em 5 a 12 minutos', () => {
+    const firstChain = buildCost('miner') + 2 * buildCost('conveyor') + buildCost('hub');
+    expect(minutes(firstChain, rates.hub)).toBeGreaterThan(5);
+    expect(minutes(firstChain, rates.hub)).toBeLessThan(12);
+  });
+
+  it('cada máquina se paga no tempo-alvo com o ganho que ela traz', () => {
+    expect(minutes(buildCost('miner'), rates.hub)).toBeGreaterThan(3);
+    expect(minutes(buildCost('miner'), rates.hub)).toBeLessThan(8);
+    expect(minutes(buildCost('furnace'), rates.furnace - rates.hub)).toBeGreaterThan(3);
+    expect(minutes(buildCost('furnace'), rates.furnace - rates.hub)).toBeLessThan(8);
+    expect(minutes(buildCost('assembler'), rates.assembler - rates.furnace)).toBeGreaterThan(5);
+    expect(minutes(buildCost('assembler'), rates.assembler - rates.furnace)).toBeLessThan(15);
+  });
+
+  it('pesquisa mais funda custa mais que cada tecnologia que ela exige', () => {
+    for (const tech of TECHS) for (const required of tech.requires ?? []) if (!required.startsWith('mk')) expect(tech.cost, `${tech.id} > ${required}`).toBeGreaterThan(cost(required));
+  });
+
+  it('cada versão Mk custa pelo menos o dobro da anterior e mais que a tecnologia que a destrava', () => {
+    for (let tier = 3; tier <= MAX_TIER; tier++) expect(tierCost(tier)).toBeGreaterThanOrEqual(2 * tierCost(tier - 1));
+    expect(tierCost(3)).toBeGreaterThan(cost('electronics'));
+    expect(tierCost(4)).toBeGreaterThan(cost('robotics'));
   });
 });

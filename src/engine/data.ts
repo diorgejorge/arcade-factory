@@ -43,15 +43,22 @@ export const BUILDING_SIZE: Record<BuildingKind, number> = {
   router: 1,
 };
 
-/** Pontos gastos para construir (Mk1). Valores provisórios, a acertar jogando. */
+/**
+ * ECONOMIA (em pontos). Renda medida no motor (20 ticks/s), por mineradora sobre 4 tiles de ferro:
+ *   minério direto para a Central 1,33 pts/s · com fornalha 2,67 · com montadora de engrenagem 5,33.
+ * Metas de retorno (testadas em sim.test.ts, 'balanceamento'): a primeira cadeia se paga em 5 a 12 min,
+ * mineradora extra em 3 a 8, fornalha em 3 a 8 e montadora em 5 a 15. Pesquisas ficam na escala de 10 a 15%
+ * dos pontos de uma temporada. Tudo provisório: acertar jogando.
+ */
+/** Pontos gastos para construir (Mk1). */
 export const BUILD_COST: Record<BuildingKind, number> = {
-  conveyor: 2,
-  junction: 8,
-  router: 8,
-  miner: 60,
-  furnace: 90,
-  assembler: 240,
-  hub: 150,
+  conveyor: 3,
+  junction: 20,
+  router: 20,
+  miner: 360,
+  furnace: 400,
+  assembler: 1200,
+  hub: 300,
 };
 
 /** Máquinas que têm versões Mk2, Mk3... (logística e Central não têm). */
@@ -67,8 +74,8 @@ export const buildCost = (kind: BuildingKind, mk = 1): number =>
   Math.round(BUILD_COST[kind] * (1 + MK_COST_STEP * ((TIERED_KINDS.includes(kind) ? mk : 1) - 1)));
 /** Remover custa o dobro de construir: trocar de lugar é pagar duas vezes (e mais a construção nova). */
 export const removalCost = (kind: BuildingKind, mk = 1): number => 2 * buildCost(kind, mk);
-/** Pontos para pesquisar a versão `tier` (Mk2 em diante): 2000, 5000, 12500... valores provisórios de balanceamento. */
-export const tierCost = (tier: number): number => Math.round(2000 * 2.5 ** (tier - 2));
+/** Pontos para pesquisar a versão `tier` (Mk2 em diante): 30 mil, 78 mil, 202,8 mil... cada uma 2,6x a anterior (retornos decrescentes). */
+export const tierCost = (tier: number): number => Math.round((30000 * 2.6 ** (tier - 2)) / 100) * 100;
 
 /** Multiplicador de velocidade de produção das máquinas. */
 export const CRAFT_SPEED: Partial<Record<BuildingKind, number>> = { furnace: 3, assembler: 4 };
@@ -108,17 +115,17 @@ export const FURNACE_RECIPE_BY_INPUT: Partial<Record<ItemId, Recipe>> = Object.f
  * (logística → expansões) e a evolução das máquinas (Mk), que se cruzam em Robótica (3 requisitos).
  */
 export const TECHS: readonly Tech[] = [
-  { id: 'smelting', name: 'Fundição de ferro', cost: 30, buildings: ['furnace'], recipes: ['smelt_iron'] },
-  { id: 'smelting_copper', name: 'Fundição de cobre', cost: 60, requires: ['smelting'], recipes: ['smelt_copper'] },
-  { id: 'logistics', name: 'Logística', cost: 50, requires: ['smelting'], buildings: ['junction', 'router'] },
-  { id: 'assembly', name: 'Montagem', cost: 80, requires: ['smelting'], buildings: ['assembler'], recipes: ['gear'] },
-  { id: 'wiring', name: 'Fiação', cost: 120, requires: ['assembly', 'smelting_copper'], recipes: ['wire'] },
-  { id: 'land_1', name: 'Expansão I', cost: 160, requires: ['assembly', 'logistics'], effect: 'expand_land' },
-  { id: 'electronics', name: 'Eletrônica', cost: 220, requires: ['wiring', 'logistics'], recipes: ['circuit'] },
-  { id: 'land_2', name: 'Expansão II', cost: 440, requires: ['land_1', 'electronics'], effect: 'expand_land' },
-  { id: 'robotics', name: 'Robótica', cost: 600, requires: ['electronics', 'land_1', 'mk2'], recipes: ['motor'] },
-  { id: 'land_3', name: 'Expansão III', cost: 960, requires: ['land_2', 'robotics'], effect: 'expand_land' },
-  { id: 'overclock', name: 'Overclock', cost: 800, requires: ['robotics', 'land_2'], effect: 'miner_boost' },
+  { id: 'smelting', name: 'Fundição de ferro', cost: 800, buildings: ['furnace'], recipes: ['smelt_iron'] },
+  { id: 'smelting_copper', name: 'Fundição de cobre', cost: 5000, requires: ['smelting'], recipes: ['smelt_copper'] },
+  { id: 'logistics', name: 'Logística', cost: 3000, requires: ['smelting'], buildings: ['junction', 'router'] },
+  { id: 'assembly', name: 'Montagem', cost: 4000, requires: ['smelting'], buildings: ['assembler'], recipes: ['gear'] },
+  { id: 'wiring', name: 'Fiação', cost: 15000, requires: ['assembly', 'smelting_copper'], recipes: ['wire'] },
+  { id: 'land_1', name: 'Expansão I', cost: 20000, requires: ['assembly', 'logistics'], effect: 'expand_land' },
+  { id: 'electronics', name: 'Eletrônica', cost: 60000, requires: ['wiring', 'logistics'], recipes: ['circuit'] },
+  { id: 'land_2', name: 'Expansão II', cost: 90000, requires: ['land_1', 'electronics'], effect: 'expand_land' },
+  { id: 'robotics', name: 'Robótica', cost: 200000, requires: ['electronics', 'land_1', 'mk2'], recipes: ['motor'] },
+  { id: 'land_3', name: 'Expansão III', cost: 350000, requires: ['land_2', 'robotics'], effect: 'expand_land' },
+  { id: 'overclock', name: 'Overclock', cost: 300000, requires: ['robotics', 'land_2'], effect: 'miner_boost' },
 ];
 
 /** Requisitos (além da versão anterior) para pesquisar a versão `tier` das máquinas. */

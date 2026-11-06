@@ -23,7 +23,7 @@ button, select { font: inherit; color: var(--text); background: #232a36; border:
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.active { border-color: var(--accent); background: #3a3320; }
-.tool { display: flex; align-items: center; gap: 6px; width: 150px; padding: 3px 6px; text-align: left; }
+.tool { display: flex; align-items: center; gap: 6px; width: 168px; padding: 3px 6px; text-align: left; }
 .tool canvas { position: static; width: 20px; height: 20px; flex: none; cursor: inherit; }
 .tool kbd { margin-left: auto; color: var(--muted); }
 .row { display: flex; justify-content: space-between; gap: 8px; }

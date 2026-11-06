@@ -14,7 +14,7 @@ import {
 } from '../engine/data';
 import { TICK_RATE, type Game } from '../engine/sim';
 import type { BuildingKind, Entity } from '../engine/types';
-import { el, syncSection, type Child } from './dom';
+import { el, formatNumber, syncSection, type Child } from './dom';
 import { iconFor } from './sprites';
 
 export interface UiState {
@@ -67,7 +67,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
   function buildToolbar(): Child[] {
     const tools: Child[] = BUILDING_ORDER.map((kind, index) => {
       const unlocked = game.isBuildingUnlocked(kind);
-      const button = el('button', `tool${state.tool === kind ? ' active' : ''}`, iconFor(kind), el('span', '', unlocked ? BUILDING_LABEL[kind] : `🔒 ${BUILDING_LABEL[kind]}`), el('small', 'price', `−${buildCost(kind, state.mk)}`), el('kbd', '', String(index + 1)));
+      const button = el('button', `tool${state.tool === kind ? ' active' : ''}`, iconFor(kind), el('span', '', unlocked ? BUILDING_LABEL[kind] : `🔒 ${BUILDING_LABEL[kind]}`), el('small', 'price', `−${formatNumber(buildCost(kind, state.mk))}`), el('kbd', '', String(index + 1)));
       button.disabled = !unlocked;
       button.onclick = () => actions.selectTool(state.tool === kind ? null : kind);
       return button;
@@ -111,7 +111,7 @@ export function createUi(game: Game, state: UiState, actions: UiActions) {
       nodes.push(el('div', 'muted', 'R gira a máquina.'));
     }
     if (TIERED_KINDS.includes(entity.kind)) nodes.push(el('div', 'muted', `Mk${entity.mk}: +${Math.round(TIER_BONUS * (entity.mk - 1) * 100)}% de desempenho`));
-    nodes.push(el('div', 'muted', `Remover custa ${removalCost(entity.kind, entity.mk)} pontos.`));
+    nodes.push(el('div', 'muted', `Remover custa ${formatNumber(removalCost(entity.kind, entity.mk))} pontos.`));
     return nodes;
   }
 
