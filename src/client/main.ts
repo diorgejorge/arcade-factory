@@ -159,6 +159,7 @@ window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLSelectElement) return;
   const key = e.key.toLowerCase();
   heldKeys.add(key);
+  if (key === 'h') return void document.body.classList.toggle('ui-hidden');
   if (key === 't') return toggleTree();
   if (key === 'b') return toggleCatalog();
   if (modalOpen()) {

@@ -256,12 +256,13 @@ function hub(): Model {
 
 function conveyor(): Model {
   const g = new THREE.Group();
-  box(g, 1, 0.14, 0.12, 0, 0, -0.42, C.steel); box(g, 1, 0.14, 0.12, 0, 0, 0.42, C.steel);
-  box(g, 1, 0.08, 0.72, 0, 0, 0, C.leather);
-  for (let k = 0; k < 6; k++) box(g, 0.06, 0.02, 0.06, -0.4 + (k % 2) * 0.8, 0.14, k < 3 ? -0.42 : 0.42, C.brass);
+  box(g, 1, 0.04, 1, 0, 0, 0, '#3a3028'); // leito escuro: destaca a esteira do chão
+  box(g, 1, 0.2, 0.12, 0, 0.04, -0.42, C.steel); box(g, 1, 0.2, 0.12, 0, 0.04, 0.42, C.steel);
+  box(g, 1, 0.1, 0.72, 0, 0.04, 0, '#6e5240');
+  for (let k = 0; k < 6; k++) box(g, 0.07, 0.03, 0.07, -0.4 + (k % 2) * 0.8, 0.24, k < 3 ? -0.42 : 0.42, C.brassLight);
   const chevrons = Array.from({ length: 4 }, () => {
     const c = new THREE.Group();
-    for (const s of [-1, 1]) { const arm = box(c, 0.26, 0.02, 0.06, -0.06, 0.08, s * 0.1, C.chevron); arm.rotation.y = s * 0.7; }
+    for (const s of [-1, 1]) { const arm = box(c, 0.3, 0.03, 0.08, -0.06, 0.14, s * 0.1, '#e3b97c'); arm.rotation.y = s * 0.7; }
     g.add(c);
     return c;
   });

@@ -18,8 +18,8 @@ const ZOOM_MIN = 4;
 const ZOOM_MAX = 16;
 
 const ITEM_COLOR: Record<ItemId, string> = {
-  iron_ore: '#8f9cac', copper_ore: '#d4743f', iron_plate: '#c9d3df', copper_plate: '#f0a066',
-  gear: '#b5bfcb', wire: '#e8b04a', circuit: '#4cc38a', motor: '#e5586e',
+  iron_ore: '#a8b6c8', copper_ore: '#e0804a', iron_plate: '#dbe4ee', copper_plate: '#f5ae74',
+  gear: '#c3cdd9', wire: '#f0bb55', circuit: '#55d99a', motor: '#ef6b80',
 };
 const GRASS = ['#5fae3e', '#6cba45', '#58a238'];
 const DIRT = ['#8a5a34', '#7a4f2e', '#6b4529', '#5e3d26', '#523422', '#46302a'];
@@ -188,7 +188,7 @@ export function createWorld3D(canvas: HTMLCanvasElement, game: Game) {
     models.delete(id);
   };
 
-  const itemMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.14, 0.2), new THREE.MeshLambertMaterial(), MAX_ITEMS);
+  const itemMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.2, 0.3), new THREE.MeshLambertMaterial(), MAX_ITEMS);
   itemMesh.castShadow = true;
   itemMesh.frustumCulled = false;
   scene.add(itemMesh);
@@ -298,7 +298,7 @@ export function createWorld3D(canvas: HTMLCanvasElement, game: Game) {
         model.update(seconds, activeOf(entity, scoring));
         for (const item of entity.belt) {
           if (itemCount >= MAX_ITEMS) break;
-          m4.setPosition(item.pwx + (item.wx - item.pwx) * alpha - W / 2, 0.2, item.pwy + (item.wy - item.pwy) * alpha - H / 2);
+          m4.setPosition(item.pwx + (item.wx - item.pwx) * alpha - W / 2, 0.25, item.pwy + (item.wy - item.pwy) * alpha - H / 2);
           itemMesh.setMatrixAt(itemCount, m4);
           itemMesh.setColorAt(itemCount, itemColors[item.kind]);
           itemCount++;

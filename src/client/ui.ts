@@ -30,7 +30,7 @@ export interface UiActions {
   toggleCatalog(): void;
 }
 
-const DEFAULT_HINT = 'Botão esquerdo: construir · direito: remover · WASD: mover · roda: zoom · R: girar · Q: cancelar';
+const DEFAULT_HINT = 'Esq: construir · Dir: remover · WASD: mover · roda: zoom · R: girar · Q: cancelar · B/T: telas · H: ocultar painéis';
 
 function formatTime(ticks: number): string {
   const seconds = Math.floor(ticks / TICK_RATE);
