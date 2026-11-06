@@ -67,15 +67,18 @@ function findSite(template: (typeof TEMPLATES)['raw']): { x: number; y: number; 
 const bestTemplate = () => (game.isRecipeUnlocked('gear') ? 'gear' : game.isBuildingUnlocked('furnace') ? 'plate' : 'raw');
 const lineCost = (name: keyof typeof TEMPLATES) => TEMPLATES[name].pieces.reduce((sum, p) => sum + buildCost(p.kind, mkFor(p.kind)), 0);
 
-type Placed = { kind: BuildingKind; x: number; y: number }[];
+type Placed = { kind: BuildingKind; x: number; y: number; mk: number; dir: Dir }[];
 
 function buildLine(name: keyof typeof TEMPLATES): Placed | undefined {
   const template = TEMPLATES[name];
   const site = findSite(template);
   if (!site) return undefined;
-  const placed = layout(template, site.x, site.y, site.dir);
+  return construct(name, layout(template, site.x, site.y, site.dir).map((p) => ({ ...p, mk: mkFor(p.kind), dir: site.dir })));
+}
+
+function construct(name: keyof typeof TEMPLATES, placed: Placed): Placed {
   for (const piece of placed) {
-    const result = game.place(piece.kind, piece.x, piece.y, site.dir, mkFor(piece.kind));
+    const result = game.place(piece.kind, piece.x, piece.y, piece.dir, piece.mk);
     if (result !== 'ok') throw new Error(`bot: ${piece.kind} ${result}`);
   }
   if (name === 'gear') game.setRecipe(placed[4].x, placed[4].y, 'gear');
@@ -84,7 +87,7 @@ function buildLine(name: keyof typeof TEMPLATES): Placed | undefined {
 
 type Name = keyof typeof TEMPLATES;
 const RANK: Record<Name, number> = { raw: 0, plate: 1, gear: 2 };
-const built: { name: Name; at: Placed }[] = [];
+const built: { name: Name; at: Placed; blocked?: boolean }[] = [];
 const removeCost = (name: Name) => TEMPLATES[name].pieces.reduce((sum, p) => sum + removalCost(p.kind, mkFor(p.kind)), 0);
 
 const nextResearch = () => RESEARCH_ORDER.find((id) => (id.startsWith('mk') ? game.machineTier < Number(id.slice(2)) : !game.researched.has(id)));
@@ -127,16 +130,19 @@ for (let tick = 0; tick < DAYS * 24 * 3600 * TPS; tick++) {
     lines++;
     if (lines % 5 === 0 || lines <= 3) log.push(`${clock(game.tick)}  linha ${String(lines).padStart(2)} (${name}) · score ${Math.floor(game.score).toLocaleString('pt-BR')}`);
   }
-  // reforma: troca a linha mais fraca pelo melhor modelo (paga a remoção)
-  const weakest = built.filter((l) => RANK[l.name] < RANK[name]).sort((a, b) => RANK[a.name] - RANK[b.name])[0];
+  // reforma: troca a linha mais fraca pelo melhor modelo (paga a remoção); se não couber, refaz a antiga e não tenta de novo
+  const weakest = built.filter((l) => !l.blocked && RANK[l.name] < RANK[name]).sort((a, b) => RANK[a.name] - RANK[b.name])[0];
   if (weakest && (exhausted || lines >= wantLines) && game.score >= removeCost(weakest.name) + lineCost(name)) {
     for (const piece of weakest.at) game.remove(piece.x, piece.y);
-    built.splice(built.indexOf(weakest), 1);
-    const at = buildLine(name) ?? buildLine(weakest.name);
-    if (!at) throw new Error('bot: reforma sem sítio');
-    built.push({ name: name === weakest.name ? name : (RANK[name] ? name : weakest.name), at });
-    upgrades++;
-    log.push(`${clock(game.tick)}  reformou linha ${weakest.name} → ${name} · score ${Math.floor(game.score).toLocaleString('pt-BR')}`);
+    const at = buildLine(name);
+    if (at) {
+      built.splice(built.indexOf(weakest), 1, { name, at });
+      upgrades++;
+      log.push(`${clock(game.tick)}  reformou linha ${weakest.name} → ${name} · score ${Math.floor(game.score).toLocaleString('pt-BR')}`);
+    } else {
+      construct(weakest.name, weakest.at); // não coube: volta como era
+      weakest.blocked = true;
+    }
   }
   // 2) com as linhas em dia (ou sem espaço), pesquisa o que der
   if (lines >= wantLines || exhausted) {
